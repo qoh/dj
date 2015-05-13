@@ -11,7 +11,7 @@ function love.load()
     gamestate.registerEvents()
 
     states.songselect:run(function(filename, song, data)
-        --gamestate.switch(states.game, filename, song, data)
-        gamestate.switch(states.editor, filename, song, data)
+        gamestate.switch(states.game, filename, song, data)
+        --gamestate.switch(states.editor, filename, song, data)
     end)
 end
