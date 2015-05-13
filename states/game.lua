@@ -15,6 +15,7 @@ local state = {}
 
 function state:init()
     self.regularFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
+    self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
     self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
@@ -894,6 +895,10 @@ function state:draw()
                 love.graphics.setStencil()
             end
 
+            love.graphics.setColor(150, 150, 150)
+            love.graphics.setFont(self.strongFont)
+            love.graphics.printf("Left", sdx - 32, 108, 64, "center")
+
             -- Draw the X/A/B buttons
             button(width - 32 - 32 - 8 - 32 - 8 - 32, 48, "X", joystick:isGamepadDown("x"))
             button(width - 32 - 32 - 8 - 32, 48, "A", joystick:isGamepadDown("a"))
@@ -918,6 +923,10 @@ function state:draw()
             button(width - 32 - 32 - 8 - 32 - 8 - 32, 32, "1", love.keyboard.isDown("kp1"))
             button(width - 32 - 32 - 8 - 32, 32, "2", love.keyboard.isDown("kp2"))
             button(width - 32 - 32, 32, "3", love.keyboard.isDown("kp3"))
+
+            love.graphics.setColor(150, 150, 150)
+            love.graphics.setFont(self.strongFont)
+            love.graphics.printf("Numpad", width - 32 - 32 - 8 - 32 - 8 - 32, 72, 114, "center")
         end
     end
 end
