@@ -196,9 +196,10 @@ function state:select(index)
         end
 
         self.source = love.audio.newSource(currSoundFile, "stream")
+        self.source:setLooping(true)
+        self.source:setVolume(0)
         self.source:play()
         self.source:seek(30.5)
-        self.source:setVolume(0)
     end
 end
 

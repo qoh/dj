@@ -211,6 +211,10 @@ function state:isLanePressed(lane)
 end
 
 function state:update(dt)
+    if self.audioSource:isStopped() then
+        love.load()
+    end
+
     dt = dt * self.modifier
 
     for i=1, 3 do
@@ -450,12 +454,18 @@ function state:update(dt)
                 end
             end
 
+            if not self.lastSpinning then
+                self.audioSource:pause()
+            end
+
             self.lastSpinAngle = spinAngle
-            self.audioSource:pause()
+            self.lastSpinning = true
 
             spinning = true
-        else
+        elseif self.lastSpinning then
             self.lastSpinAngle = nil
+            self.lastSpinning = false
+
             self.audioSource:play()
         end
     end
