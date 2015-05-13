@@ -78,7 +78,7 @@ function state:enter(previous, callback, songs, loads)
     self.datas = {}
     self.selected = 1
     self.source = nil
-    self.sourceFade = nil
+    self.fading = {}
 
     local requests = love.thread.getChannel("songselect-requests")
 
@@ -93,10 +93,11 @@ function state:enter(previous, callback, songs, loads)
 end
 
 function state:leave()
-    if self.sourceFade then
-        self.sourceFade:stop()
-        self.sourceFade = nil
+    for i, source in ipairs(self.fading) do
+        source:stop()
     end
+
+    self.fading = nil
 
     if self.source then
         self.source:stop()
@@ -117,7 +118,7 @@ function state:select(index)
 
     if self.selected ~= selected then
         if self.source then
-            self.sourceFade = self.source
+            table.insert(self.fading, self.source)
             self.source = nil
         end
 
@@ -192,14 +193,17 @@ function state:update(dt)
         end
     end
 
-    if self.sourceFade ~= nil then
-        local volume = self.sourceFade:getVolume() - dt * 2
+    local i = 1
+
+    while i <= #self.fading do
+        local volume = self.fading[i]:getVolume() - dt * 2
 
         if volume <= 0 then
-            self.sourceFade:stop()
-            self.sourceFade = nil
+            self.fading[i]:stop()
+            table.remove(self.fading, i)
         else
-            self.sourceFade:setVolume(volume)
+            self.fading[i]:setVolume(volume)
+            i = i + 1
         end
     end
 
@@ -224,18 +228,25 @@ function state:draw()
         end
 
         local load = self.loads[file]
+        local shown
 
-        local title = load.title or love.path.leaf(file)
-        local author = load.author or "Unknown artist"
-        local difficulty = ""
+        if load.title then
+            shown = load.title .. " - " .. (load.author or "Unknown artist")
+        else
+            shown = love.path.leaf(file)
+
+            if load.author then
+                shown = shown .. " - " .. load.author
+            end
+        end
 
         if load.difficulty then
-            difficulty = " (" .. load.difficulty .. ")"
+            shown = shown .. " (" .. load.difficulty .. ")"
         end
 
         love.graphics.setFont(self.titleFont)
         love.graphics.setColor(255, 255, 255)
-        love.graphics.print(title .. " - " .. author .. difficulty, x + 8, y + 8)
+        love.graphics.print(shown, x + 8, y + 8)
 
         local data = self.datas[file]
         local detail
