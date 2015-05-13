@@ -102,6 +102,10 @@ function state:resume()
     end
 end
 
+function state:getBeatScale()
+    return self.song.beatScale or 64
+end
+
 function state:getCurrentPosition()
     local time = self.audioSource:tell("seconds") - self.startTimer - (self.song.offset or 0)
     return time / (1 / (self.song.bpm / 60))
@@ -566,8 +570,6 @@ function state:update(dt)
     love.graphics.setBackgroundColor(100, 100, 100)
 end
 
-local BEAT_SCALE = 64
-
 local function draw_fader_back(x, y)
     love.graphics.setColor( 50,  50,  50)
     love.graphics.circle("fill", x,      y, 24)
@@ -641,7 +643,7 @@ function state:draw()
         local offset = self.song.lanes[i][1] - position
         local fading = self.song.lanes[i][2]
 
-        if y - offset * BEAT_SCALE < 0 then
+        if y - offset * self:getBeatScale() < 0 then
             break
         end
 
@@ -652,16 +654,16 @@ function state:draw()
             -- Do we need to shift insert a point in the left lane?
             if (last_fading == -1 and fading ~= -1) or (last_fading ~= -1 and fading == -1) then
                 table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * BEAT_SCALE)
+                table.insert(vertices_left,  y - offset * self:getBeatScale())
                 table.insert(vertices_left,  lanes[     fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * BEAT_SCALE)
+                table.insert(vertices_left,  y - offset * self:getBeatScale())
             end
 
             if (last_fading ==  1 and fading ~=  1) or (last_fading ~=  1 and fading ==  1) then
                 table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * BEAT_SCALE)
+                table.insert(vertices_right, y - offset * self:getBeatScale())
                 table.insert(vertices_right, lanes[     fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * BEAT_SCALE)
+                table.insert(vertices_right, y - offset * self:getBeatScale())
             end
         end
 
@@ -700,10 +702,10 @@ function state:draw()
     love.graphics.setLineWidth(1)
 
     love.graphics.push()
-    love.graphics.translate(0, -BEAT_SCALE * (1 - (position - math.floor(position))))
+    love.graphics.translate(0, -self:getBeatScale() * (1 - (position - math.floor(position))))
 
-    for i=0, height / BEAT_SCALE do
-        love.graphics.line(beatX1, height - i * BEAT_SCALE, beatX2, height - i * BEAT_SCALE)
+    for i=0, height / self:getBeatScale() do
+        love.graphics.line(beatX1, height - i * self:getBeatScale(), beatX2, height - i * self:getBeatScale())
     end
 
     love.graphics.pop()
@@ -794,26 +796,26 @@ function state:draw()
                 end
 
                 love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.circle("fill", lanes[note[2]], y - last * BEAT_SCALE, 16, 32)
+                love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
                 love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.circle("line", lanes[note[2]], y - last * BEAT_SCALE, 16, 32)
+                love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
                 love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * BEAT_SCALE, 32, length * BEAT_SCALE)
+                love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
                 love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.line(lanes[note[2]] - 16, y - last * BEAT_SCALE, lanes[note[2]] - 16, y - offset * BEAT_SCALE)
-                love.graphics.line(lanes[note[2]] + 16, y - last * BEAT_SCALE, lanes[note[2]] + 16, y - offset * BEAT_SCALE)
+                love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
                 love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.circle("fill", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+                love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
                 love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.circle("line", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+                love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
             end
         elseif not self.noteUsed[note] and offset >= 0 then
             local color = colorsByLane[note[2]]
 
             love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-            love.graphics.circle("fill", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+            love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
             love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-            love.graphics.circle("line", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+            love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
         end
     end
 
