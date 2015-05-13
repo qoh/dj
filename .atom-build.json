@@ -1,0 +1,5 @@
+{
+    "cmd": "C:\\Program Files\\LOVE\\LOVE.exe",
+    "sh": false,
+    "args": ["{PROJECT_PATH}"]
+}
