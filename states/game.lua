@@ -147,7 +147,9 @@ function state:activateEuphoria()
 end
 
 function state:keypressed(key, unicode)
-    if key == "kp1" or key == "," then
+    if key == "escape" then
+        gamestate.push(states.pause)
+    elseif key == "kp1" or key == "," then
         self:lanePressed(self.fade == -1 and 1 or 2)
     elseif key == "kp2" or key == "." then
         self:lanePressed(3)
@@ -181,7 +183,9 @@ function state:gamepadpressed(joystick, key)
 end
 
 function state:gamepadreleased(joystick, key)
-    if key == "x" then
+    if key == "start" then
+        gamestate.push(states.pause)
+    elseif key == "x" then
         self:laneReleased(self.fade == -1 and 1 or 2)
     elseif key == "a" then
         self:laneReleased(3)

@@ -3,6 +3,7 @@ gamestate = require "lib.hump.gamestate"
 states = {
     delaytest = require "states.delaytest",
     songselect = require "states.songselect",
+    pause = require "states.pause",
     game = require "states.game",
     editor = require "states.editor"
 }
