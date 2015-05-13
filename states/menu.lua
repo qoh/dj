@@ -212,7 +212,7 @@ function state:draw()
 
     love.graphics.setColor(200, 200, 200)
     love.graphics.setFont(self.headerFont)
-    love.graphics.printf("Placeholder", -200, -150, 400, "center")
+    love.graphics.printf(love.window.getTitle(), -200, -150, 400, "center")
 
     love.graphics.setFont(self.itemFont)
     love.graphics.setColor(200, 200, 200)
