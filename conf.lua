@@ -1,6 +1,29 @@
 function love.conf(t)
+    settings = {
+        ignoreGamepad = false,
+        showInput = false
+    }
+
+    local file = "settings.lua"
+
+    if love.filesystem.isFile(file) then
+        local function patch(t, target)
+            for key, value in pairs(t) do
+                if type(value) == "table" and type(target[key]) == "table" then
+                    patch(value, target[key])
+                else
+                    target[key] = value
+                end
+            end
+        end
+
+        local user = love.filesystem.load(file)()
+        patch(user, settings)
+    end
+
     t.console = true
 
+    t.window.title = "Placeholder"
     -- t.window.height = 900
     t.window.width = 1280
     t.window.height = 720

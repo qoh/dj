@@ -474,6 +474,11 @@ function state:draw()
     love.graphics.setFont(self.smallFont)
 
     local joystick = #love.joystick.getJoysticks() > 0
+
+    if settings.ignoreGamepad then
+        joystick = nil
+    end
+    
     local imageNav = joystick and self.imageNavGamepad or self.imageNavKeyboard
     local imageSel = joystick and self.imageSelGamepad or self.imageSelKeyboard
 

@@ -120,9 +120,9 @@ function state:loseCombo()
         return
     end
 
-    self.combo = 0
-    self.shakeMiss = 1
+    self.shakeMiss = math.min(1, self.shakeMiss + self.combo / 8)
     self.stats.lostCombo = self.stats.lostCombo + 1
+    self.combo = 0
 end
 
 function state:increaseCombo()
@@ -192,9 +192,11 @@ function state:lanePressed(lane)
         if note[2] == lane and not self.noteUsed[note] then
             self.noteUsed[note] = true
             self:noteHit(note, offset)
-            break
+            return
         end
     end
+
+    self:loseCombo()
 end
 
 function state:laneReleased(lane)
@@ -261,6 +263,10 @@ end
 
 function state:isLanePressed(lane)
     local joystick = love.joystick.getJoysticks()[1]
+
+    if settings.ignoreGamepad then
+        joystick = nil
+    end
 
     if lane == 1 then
         return love.keyboard.isDown("kp1") or (joystick and joystick:isGamepadDown("x"))
@@ -329,7 +335,7 @@ function state:update(dt)
             self.faderErrorAccum = math.max(0, self.faderErrorAccum - dt)
         else
             self.faderErrorAccum = self.faderErrorAccum + dt
-            local threshold = 1 / (self.song.bpm / 60) / self.modifier * 2
+            local threshold = 1 / (self.song.bpm / 60) / self.modifier
 
             if self.faderErrorAccum > threshold then
                 self.faderErrorAccum = 0
@@ -343,6 +349,11 @@ function state:update(dt)
     end
 
     local joystick = love.joystick:getJoysticks()[1]
+
+    if settings.ignoreGamepad then
+        joystick = nil
+    end
+
     local i = 1
 
     while i <= #self.hitEffects do
@@ -395,48 +406,6 @@ function state:update(dt)
 
             isSpinning = rd > 0.34
             spinAngle = rt
-
-            -- if rd > 0.34 then
-            --     if self.lastSpinAngle then
-            --         local delta = rt - self.lastSpinAngle
-            --
-            --         if delta > math.pi then
-            --             delta = delta - math.pi * 2
-            --         elseif delta < -math.pi then
-            --             delta = delta + math.pi * 2
-            --         end
-            --
-            --         -- print(delta)
-            --         local scrobble = (delta / math.pi) * 4
-            --         local target = self.audioSource:tell("seconds") + scrobble
-            --         local limit = self.audioData:getDuration("seconds")
-            --         self.audioSource:seek(math.max(0, math.min(limit, target)))
-            --
-            --         -- Try to revive some notes
-            --         if delta < 0 then
-            --             local newNoteUsed = {}
-            --             local position = self:getCurrentPosition()
-            --
-            --             for note in pairs(self.noteUsed) do
-            --                 local offset = note[1] - position
-            --
-            --                 if offset < 0 then
-            --                     newNoteUsed[note] = true
-            --                 end
-            --             end
-            --
-            --             self.noteUsed = newNoteUsed
-            --         end
-            --     end
-            --
-            --     self.lastSpinAngle = rt
-            --     self.audioSource:pause()
-            --
-            --     spinning = true
-            -- else
-            --     self.lastSpinAngle = nil
-            --     self.audioSource:play()
-            -- end
         end
 
         -- Crossfading
@@ -455,7 +424,7 @@ function state:update(dt)
             self:setFade(fade)
         end
 
-        joystick:setVibration(self.shakeMiss, self.shakeHit)
+        joystick:setVibration(self.shakeMiss * 0.5, self.shakeHit)
     else
         local fade = 0
 
@@ -688,7 +657,7 @@ function state:draw()
     end
 
     love.graphics.push()
-    love.graphics.translate((love.math.random() - 0.5) * self.shakeMiss * 4, 0)
+    love.graphics.translate((love.math.random() - 0.5) * self.shakeMiss * 2, 0)
 
     -- Draw scratchboard
     love.graphics.setColor(30, 30, 30)
@@ -871,6 +840,84 @@ function state:draw()
         if position < entry[1] + entry[3] then
             love.graphics.printf(entry[2], x - 192, subtitle_y, 384, "center")
             subtitle_y = subtitle_y + 18
+        end
+    end
+
+    -- Draw input overlay
+    if settings.showInput then
+        local joystick = love.joystick.getJoysticks()[1]
+
+        if settings.ignoreGamepad then
+            joystick = nil
+        end
+
+        if joystick then
+            local function button(x, y, label, state)
+                love.graphics.setFont(self.messageFont)
+                love.graphics.setColor(150, 150, 150)
+                love.graphics.setLineWidth(2)
+
+                if state then
+                    love.graphics.circle("fill", x + 16, y + 16, 16, 32)
+                    love.graphics.setColor(255, 255, 255)
+                end
+
+                love.graphics.circle("line", x + 16, y + 16, 16, 32)
+                love.graphics.printf(label, x, y + 3, 32, "center")
+            end
+
+            -- love.graphics.setColor(255, 50, 50)
+            -- love.graphics.printf("Input overlay for gamepads not done", 0, 16, width - 16, "right")
+
+            -- Draw the left stick
+            local sdx = width - 32 - 32 - 8 - 32 - 8 - 32 - 24 - 32 - 16
+            local sdy = 32 + 32
+
+            love.graphics.setColor(150, 150, 150)
+            love.graphics.setLineWidth(2)
+            love.graphics.circle("line", sdx, sdy, 32, 64)
+
+            local sx = joystick:getGamepadAxis("leftx")
+            local sy = joystick:getGamepadAxis("lefty")
+            local sd = math.sqrt(sx ^ 2 + sy ^ 2)
+            sx = sx / sd
+            sy = sy / sd
+            local st = math.atan2(sy, sx)
+
+            if sd > 0.2 then
+                love.graphics.setInvertedStencil(function()
+                    love.graphics.circle("fill", sdx, sdy, 32 * sd - 8, 64 * sd - 16)
+                end)
+
+                love.graphics.setColor(200, 200, 200)
+                love.graphics.arc("fill", sdx, sdy, 32 * sd, st - math.pi / 4, st + math.pi / 4, 32 * sd * 2)
+                love.graphics.setStencil()
+            end
+
+            -- Draw the X/A/B buttons
+            button(width - 32 - 32 - 8 - 32 - 8 - 32, 48, "X", joystick:isGamepadDown("x"))
+            button(width - 32 - 32 - 8 - 32, 48, "A", joystick:isGamepadDown("a"))
+            button(width - 32 - 32, 48, "B", joystick:isGamepadDown("b"))
+        else
+            local function button(x, y, label, state)
+                love.graphics.setFont(self.messageFont)
+                love.graphics.setColor(150, 150, 150)
+                love.graphics.setLineWidth(2)
+
+                if state then
+                    love.graphics.rectangle("fill", x, y, 32, 32)
+                    love.graphics.setColor(255, 255, 255)
+                end
+
+                love.graphics.rectangle("line", x, y, 32, 32)
+                love.graphics.printf(label, x, y + 3, 32, "center")
+            end
+
+            button(width - 32 - 32 - 8 - 32 - 8 - 32 - 24 - 32 - 8 - 32, 32, "Z", love.keyboard.isDown("z"))
+            button(width - 32 - 32 - 8 - 32 - 8 - 32 - 24 - 32, 32, "X", love.keyboard.isDown("x"))
+            button(width - 32 - 32 - 8 - 32 - 8 - 32, 32, "1", love.keyboard.isDown("kp1"))
+            button(width - 32 - 32 - 8 - 32, 32, "2", love.keyboard.isDown("kp2"))
+            button(width - 32 - 32, 32, "3", love.keyboard.isDown("kp3"))
         end
     end
 end

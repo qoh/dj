@@ -15,7 +15,9 @@ function state:init()
             	gamestate.switch(states.editor, filename, song, data)
             end)
         end},
-        {"Exit the game", love.event.quit}
+        {"Help & controls", function() gamestate.switch(states.help) end},
+        {"Settings", function() gamestate.switch(states.settings) end},
+        {"Exit", love.event.quit}
     }
 end
 
@@ -26,7 +28,7 @@ function state:enter()
     self.selection = 1
 
     love.keyboard.setKeyRepeat(true)
-    love.graphics.setBackgroundColor(60, 60, 60)
+    love.graphics.setBackgroundColor(48, 48, 48)
 end
 
 function state:leave()
@@ -202,8 +204,8 @@ function state:draw()
         love.graphics.line(entry.path)
     end
 
-    love.graphics.setColor(0, 0, 0, 50)
-    love.graphics.rectangle("fill", 0, 0, width, height)
+    -- love.graphics.setColor(0, 0, 0, 50)
+    -- love.graphics.rectangle("fill", 0, 0, width, height)
 
     --
 
