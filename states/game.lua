@@ -267,7 +267,7 @@ function state:update(dt)
     local i = 1
 
     while i <= #self.hitEffects do
-        local t = self.hitEffects[i][1] + dt
+        local t = self.hitEffects[i][1] + dt * 2
 
         if t >= 1 then
             table.remove(self.hitEffects, i)
