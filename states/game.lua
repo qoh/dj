@@ -14,10 +14,9 @@ local state = {}
 -- end
 
 function state:init()
-    self.fonts = {
-        normal = love.graphics.newFont(14),
-        combo = love.graphics.newFont(24)
-    }
+    self.regularFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
+    self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
+    self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
 function state:enter(previous, filename, song, data, delay)
@@ -528,7 +527,7 @@ function state:draw()
     local width, height = love.graphics.getDimensions()
     local position = self:getCurrentPosition()
 
-    love.graphics.setFont(self.fonts.normal)
+    love.graphics.setFont(self.regularFont)
     love.graphics.setColor(255, 255, 255)
     -- love.graphics.print(math.floor(position * 4) / 4, 2, 2)
 
@@ -653,7 +652,7 @@ function state:draw()
 
     if self.combo >= 8 then
         local mult = math.min(4, 1 + math.floor(self.combo / 8))
-        love.graphics.setFont(self.fonts.combo)
+        love.graphics.setFont(self.comboFont)
         love.graphics.setColor(60, 60, 60)
         love.graphics.printf("x" .. mult, x + 119, y - 64 - 7 * 12 - 36, 64, "right")
         love.graphics.setColor(200, 100, 30)
@@ -661,7 +660,7 @@ function state:draw()
     end
 
     if self.rewind then
-        love.graphics.setFont(self.fonts.normal)
+        love.graphics.setFont(self.regularFont)
         love.graphics.setColor(60, 60, 60)
         love.graphics.printf("REWIND", x + 119, y - 64 - 7 * 12 - 36 - 24, 64, "right")
         love.graphics.setColor(200, 100, 30)
@@ -750,7 +749,7 @@ function state:draw()
     love.graphics.pop()
 
     -- Score..
-    love.graphics.setFont(self.fonts.combo)
+    love.graphics.setFont(self.comboFont)
     love.graphics.setColor(0, 0, 0)
     love.graphics.print(util.addSeparators(self.score), 71, 47)
     love.graphics.setColor(255, 255, 255)
@@ -770,7 +769,7 @@ function state:draw()
         local fade = self.messageTime <= 0.5 and self.messageTime / 0.5 or 1
 
         love.graphics.setColor(255, 255, 255, 255 * fade)
-        love.graphics.setFont(self.fonts.combo)
+        love.graphics.setFont(self.messageFont)
         love.graphics.printf(self.messageText, 128, height / 3 - 24, width - 256, "center")
     end
 
@@ -782,13 +781,13 @@ function state:draw()
         love.graphics.rectangle("fill", 128, height / 3 - 24 - 8, width - 256, 56)
 
         love.graphics.setColor(255, 255, 255, 255 * fade)
-        love.graphics.setFont(self.fonts.combo)
+        love.graphics.setFont(self.messageFont)
         love.graphics.printf(self.song.title .. " - " .. self.song.author, 128, height / 3 - 24, width - 256, "center")
     end
 
     -- Draw subtitles
     local subtitle_y = y + 30
-    love.graphics.setFont(self.fonts.normal)
+    love.graphics.setFont(self.regularFont)
     love.graphics.setColor(255, 255, 255)
 
     for i, entry in ipairs(self.song.subtitles) do

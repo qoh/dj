@@ -74,10 +74,10 @@ function state:run(callback)
 end
 
 function state:init()
-    self.headerFont = love.graphics.newFont(36)
-    self.titleFont = love.graphics.newFont(24)
-    self.detailFont = love.graphics.newFont(16)
-    self.smallFont = love.graphics.newFont(14)
+    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
+    self.titleFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+    self.detailFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 16)
+    self.smallFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
 
     self.imageNavGamepad = love.graphics.newImage("assets/keys-gamepad/dpad.png")
     self.imageSelGamepad = love.graphics.newImage("assets/keys-gamepad/a.png")
