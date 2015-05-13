@@ -22,10 +22,19 @@ end
 function state:enter(previous, song, data, startFromEditor)
     self.song = song
 
+    self.stats = {
+        score = 0,
+        totalOffset = 0,
+        noteCount = #song.notes,
+        hitCount = 0,
+        missCount = 0,
+        bestCombo = 0,
+        lostCombo = 0
+    }
+
     self.modifier = 1
     self.startTimer = 3
     self.fade = 0
-    self.score = 0
     self.combo = 0
     self.rewind = false
     self.noteUsed = {}
@@ -71,10 +80,20 @@ function state:leave()
     self.audioSource:stop()
     self.audioSource = nil
     self.audioData = nil
+
+    local joystick = love.joystick:getJoysticks()[1]
+    if joystick then
+        joystick:setVibration()
+    end
 end
 
 function state:pause()
     self.audioSource:pause()
+
+    local joystick = love.joystick:getJoysticks()[1]
+    if joystick then
+        joystick:setVibration()
+    end
 end
 
 function state:resume()
@@ -92,8 +111,19 @@ function state:getMultiplier()
     return math.min(4, 1 + math.floor(self.combo / 8))
 end
 
+function state:loseCombo()
+    if self.combo == 0 then
+        return
+    end
+
+    self.combo = 0
+    self.shakeMiss = 1
+    self.stats.lostCombo = self.stats.lostCombo + 1
+end
+
 function state:increaseCombo()
     self.combo = self.combo + 1
+    self.stats.bestCombo = math.max(self.stats.bestCombo, self.combo)
 
     if self.combo > 0 and self.combo % 50 == 0 then
         self.messageTime = 2
@@ -111,7 +141,10 @@ end
 function state:noteHit(note, offset)
     self.shakeHit = math.min(1, self.shakeHit + 0.3)
 
-    self.score = self.score + 100 * self:getMultiplier()
+    self.stats.hitCount = self.stats.hitCount + 1
+    self.stats.totalOffset = self.stats.totalOffset + offset
+    self.stats.score = self.stats.score + 100 * self:getMultiplier()
+
     self:increaseCombo()
 
     if note[2] == 1 or note[2] == 2 then
@@ -126,11 +159,8 @@ function state:noteHit(note, offset)
 end
 
 function state:noteMiss(note)
-    if self.combo > 0 then
-        self.shakeMiss = 1
-    end
-
-    self.combo = 0
+    self:loseCombo()
+    self.stats.missCount = self.stats.missCount + 1
 
     if note[2] == 1 or note[2] == 2 then
         self.laneUsed[1] = false
@@ -242,9 +272,7 @@ function state:update(dt)
         if self.startFromEditor then
             gamestate.pop()
         else
-            states.songselect:run(function(filename, song, data)
-            	gamestate.switch(states.game, song, data)
-            end)
+            gamestate.switch(states.win, self.stats)
         end
 
         return
@@ -280,7 +308,7 @@ function state:update(dt)
             self.faderPointTime = self.faderPointTime - dt
 
             while self.faderPointTime <= 0 do
-                self.score = self.score + 10 * self:getMultiplier()
+                self.stats.score = self.stats.score + 10 * self:getMultiplier()
                 self.faderPointCount = self.faderPointCount + 1
 
                 if self.faderPointCount == 5 then
@@ -301,7 +329,7 @@ function state:update(dt)
 
             if self.faderErrorAccum > threshold then
                 self.faderErrorAccum = 0
-                self.combo = 0
+                self:loseCombo()
             end
         end
     end
@@ -794,9 +822,9 @@ function state:draw()
     -- Score..
     love.graphics.setFont(self.comboFont)
     love.graphics.setColor(0, 0, 0)
-    love.graphics.print(util.addSeparators(self.score), 71, 47)
+    love.graphics.print(util.addSeparators(self.stats.score), 71, 47)
     love.graphics.setColor(255, 255, 255)
-    love.graphics.print(util.addSeparators(self.score), 72, 48)
+    love.graphics.print(util.addSeparators(self.stats.score), 72, 48)
 
     -- Draw hit effects
     love.graphics.setLineWidth(4)

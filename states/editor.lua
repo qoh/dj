@@ -74,7 +74,9 @@ function state:getSelectedNote(limit)
 end
 
 function state:keypressed(key, unicode)
-    if key == " " then
+    if key == "escape" then
+        gamestate.switch(states.menu)
+    elseif key == " " then
         if self.audioSource:isPlaying() then
             self.audioSource:pause()
         else

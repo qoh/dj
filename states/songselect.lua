@@ -70,7 +70,7 @@ function state:run(callback)
         return i < j
     end)
 
-    gamestate.switch(self, callback, songs, loads)
+    gamestate.push(self, callback, songs, loads)
 end
 
 function state:init()
@@ -216,8 +216,10 @@ function state:gamepadpressed(joystick, key)
         self:select(self.selected + 1)
     elseif key == "dpup" then
         self:select(self.selected - 1)
-    elseif key == "a" or key == "start" then
+    elseif key == "a" then
         self:continue()
+    elseif key == "b" then
+        gamestate.pop()
     end
 end
 
@@ -228,6 +230,8 @@ function state:keypressed(key, unicode)
         self:select(self.selected - 1)
     elseif key == "return" then
         self:continue()
+    elseif key == "escape" then
+        gamestate.pop()
     end
 end
 
