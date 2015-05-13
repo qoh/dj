@@ -49,6 +49,7 @@ function GS.push(to, ...)
 	assert(to, "Missing argument: Gamestate to switch to")
 	assert(to ~= GS, "Can't call push with colon operator")
 	local pre = stack[#stack]
+	;(pre.pause or __NULL__)(pre, to, ...)
 	;(to.init or __NULL__)(to)
 	to.init = nil
 	stack[#stack+1] = to

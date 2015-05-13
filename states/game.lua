@@ -15,7 +15,7 @@ local state = {}
 
 function state:init()
     self.fonts = {
-        normal = love.graphics.getFont(),
+        normal = love.graphics.newFont(14),
         combo = love.graphics.newFont(24)
     }
 end
@@ -26,7 +26,6 @@ function state:enter(previous, filename, song, data, delay)
     self.delay = delay
 
     self.modifier = 1
-    -- self.cheapstart = 256
     self.startTimer = 3
     self.fade = 0
     self.score = 0
@@ -55,9 +54,15 @@ function state:enter(previous, filename, song, data, delay)
         [3] = 0
     }
 
-    -- self.audioData = love.sound.newSoundData("songs/" .. self.song.audio)
     self.audioData = data
     self.audioSource = love.audio.newSource(self.audioData)
+    self.audioSource:play()
+    self.audioSource:pause()
+    -- self.audioSource:seek(0 * (1 / (self.song.bpm / 60)))
+end
+
+function state:pause()
+    self.audioSource:pause()
 end
 
 function state:getCurrentPosition()
@@ -171,7 +176,9 @@ function state:keyreleased(key, unicode)
 end
 
 function state:gamepadpressed(joystick, key)
-    if key == "x" then
+    if key == "start" then
+        gamestate.push(states.pause)
+    elseif key == "x" then
         self:lanePressed(self.fade == -1 and 1 or 2)
     elseif key == "a" then
         self:lanePressed(3)
@@ -183,9 +190,7 @@ function state:gamepadpressed(joystick, key)
 end
 
 function state:gamepadreleased(joystick, key)
-    if key == "start" then
-        gamestate.push(states.pause)
-    elseif key == "x" then
+    if key == "x" then
         self:laneReleased(self.fade == -1 and 1 or 2)
     elseif key == "a" then
         self:laneReleased(3)
@@ -298,10 +303,6 @@ function state:update(dt)
         if self.startTimer <= 0 then
             self.audioSource:play()
             self.audioSource:setPitch(self.modifier)
-
-            if self.cheapstart then
-                self.audioSource:seek(self.cheapstart * (1 / (self.song.bpm / 60)))
-            end
 
             self.startTimer = 0
         else

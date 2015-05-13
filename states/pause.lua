@@ -22,6 +22,12 @@ function state:update(dt)
     end
 end
 
+function state:gamepadpressed(joystick, key)
+    if key == "start" then
+        self.closing = true
+    end
+end
+
 function state:keypressed(key, unicode)
     if key == "escape" then
         self.closing = true
