@@ -228,18 +228,25 @@ function state:draw()
         end
 
         local load = self.loads[file]
+        local shown
 
-        local title = load.title or love.path.leaf(file)
-        local author = load.author or "Unknown artist"
-        local difficulty = ""
+        if load.title then
+            shown = load.title .. " - " .. (load.author or "Unknown artist")
+        else
+            shown = love.path.leaf(file)
+
+            if load.author then
+                shown = shown .. " - " .. load.author
+            end
+        end
 
         if load.difficulty then
-            difficulty = " (" .. load.difficulty .. ")"
+            shown = shown .. " (" .. load.difficulty .. ")"
         end
 
         love.graphics.setFont(self.titleFont)
         love.graphics.setColor(255, 255, 255)
-        love.graphics.print(title .. " - " .. author .. difficulty, x + 8, y + 8)
+        love.graphics.print(shown, x + 8, y + 8)
 
         local data = self.datas[file]
         local detail
