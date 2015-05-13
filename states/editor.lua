@@ -26,6 +26,17 @@ function state:enter(previous, filename, song, data)
 
     self.mouseLane = nil
     self.mouseBeat = nil
+
+    love.keyboard.setKeyRepeat(true)
+end
+
+function state:leave()
+    love.keyboard.setKeyRepeat(false)
+end
+
+function state:pause()
+    love.keyboard.setKeyRepeat(false)
+    self.audioSource:pause()
 end
 
 function state:getPosition()
@@ -70,9 +81,11 @@ function state:keypressed(key, unicode)
             self.audioSource:play()
         end
     elseif key == "home" then
-        self.audioSource:rewind()
+        self.audioSource:seek(self.audioData:getSampleCount() - 1, "samples")
+        self.lastPosition = self:getPosition()
     elseif key == "end" then
-        self.audioSource:seek(self.audioData:getDuration())
+        self.audioSource:seek(0)
+        self.lastPosition = self:getPosition()
     elseif key == "pageup" then
         self:seek(10)
     elseif key == "pagedown" then
@@ -104,6 +117,8 @@ function state:keypressed(key, unicode)
             file:close()
 
             print("Saved!")
+        elseif key == "p" then
+            gamestate.push(states.game, self.song, self.audioData, self:getPosition())
         end
     end
 end
@@ -162,6 +177,13 @@ function state:mousepressed(x, y, button)
 end
 
 function state:update(dt)
+    if self.audioSource:isStopped() then
+        self.audioSource:play()
+        self.audioSource:pause()
+        self.audioSource:seek(self.audioData:getSampleCount() - 1, "samples")
+        self.lastPosition = self:getPosition()
+    end
+
     local kl = love.keyboard.isDown("left")
     local kr = love.keyboard.isDown("right")
 

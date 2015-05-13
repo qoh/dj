@@ -8,7 +8,7 @@ function state:init()
         {"Resume", function() self.closing = true end},
         {"Select song", function()
             states.songselect:run(function(filename, song, data)
-            	gamestate.switch(states.game, filename, song, data, 0)
+            	gamestate.switch(states.game, song, data)
             end)
         end},
         {"Exit game", love.event.quit}

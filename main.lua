@@ -15,7 +15,7 @@ function love.load()
     	if arg[2] == "edit" or arg[3] == "edit" then
     		gamestate.switch(states.editor, filename, song, data)
     	else
-        	gamestate.switch(states.game, filename, song, data, 0)
+        	gamestate.switch(states.game, song, data)
         end
     end)
 end

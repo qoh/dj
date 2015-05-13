@@ -19,10 +19,8 @@ function state:init()
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
-function state:enter(previous, filename, song, data, delay)
-    self.filename = filename
-    self.song = love.filesystem.load(filename)()
-    self.delay = delay
+function state:enter(previous, song, data, startFromEditor)
+    self.song = song
 
     self.modifier = 1
     self.startTimer = 3
@@ -55,13 +53,34 @@ function state:enter(previous, filename, song, data, delay)
 
     self.audioData = data
     self.audioSource = love.audio.newSource(self.audioData)
+    self.audioSource:setPitch(self.modifier)
     self.audioSource:play()
-    self.audioSource:pause()
-    -- self.audioSource:seek(0 * (1 / (self.song.bpm / 60)))
+
+    if startFromEditor then
+        self.startFromEditor = true
+        self.startTimer = 0
+        self.audioSource:seek(startFromEditor * (1 / (self.song.bpm / 60)))
+    else
+        self.audioSource:pause()
+    end
+end
+
+function state:leave()
+    self.song = nil
+
+    self.audioSource:stop()
+    self.audioSource = nil
+    self.audioData = nil
 end
 
 function state:pause()
     self.audioSource:pause()
+end
+
+function state:resume()
+    if self.startTimer <= 0 then
+        self.audioSource:play()
+    end
 end
 
 function state:getCurrentPosition()
@@ -150,9 +169,17 @@ end
 function state:activateEuphoria()
 end
 
+function state:escape()
+    if self.startFromEditor then
+        gamestate.pop()
+    else
+        gamestate.push(states.pause)
+    end
+end
+
 function state:keypressed(key, unicode)
     if key == "escape" then
-        gamestate.push(states.pause)
+        self:escape()
     elseif key == "kp1" or key == "," then
         self:lanePressed(self.fade == -1 and 1 or 2)
     elseif key == "kp2" or key == "." then
@@ -176,7 +203,7 @@ end
 
 function state:gamepadpressed(joystick, key)
     if key == "start" then
-        gamestate.push(states.pause)
+        self:escape()
     elseif key == "x" then
         self:lanePressed(self.fade == -1 and 1 or 2)
     elseif key == "a" then
@@ -212,7 +239,15 @@ end
 
 function state:update(dt)
     if self.audioSource:isStopped() then
-        love.load()
+        if self.startFromEditor then
+            gamestate.pop()
+        else
+            states.songselect:run(function(filename, song, data)
+            	gamestate.switch(states.game, song, data)
+            end)
+        end
+
+        return
     end
 
     dt = dt * self.modifier
@@ -241,10 +276,10 @@ function state:update(dt)
 
     if fade ~= 0 then
         -- Give points
-        self.faderPointTime = self.faderPointTime - dt
+        if self.fade == fade then
+            self.faderPointTime = self.faderPointTime - dt
 
-        while self.faderPointTime <= 0 do
-            if self.fade == fade then
+            while self.faderPointTime <= 0 do
                 self.score = self.score + 10 * self:getMultiplier()
                 self.faderPointCount = self.faderPointCount + 1
 
@@ -252,9 +287,9 @@ function state:update(dt)
                     self:increaseCombo()
                     self.faderPointCount = 0
                 end
-            end
 
-            self.faderPointTime = self.faderPointTime + 0.2
+                self.faderPointTime = self.faderPointTime + 0.2
+            end
         end
 
         -- Drop combo
@@ -305,8 +340,6 @@ function state:update(dt)
 
         if self.startTimer <= 0 then
             self.audioSource:play()
-            self.audioSource:setPitch(self.modifier)
-
             self.startTimer = 0
         else
             started = false
