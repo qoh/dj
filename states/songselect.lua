@@ -45,24 +45,51 @@
 local util = require "lib.util"
 local state = {}
 
+local function filepath(file)
+    local index
+
+    while true do
+        local search = file:find("/", (index or 1) + 1, true)
+
+        if search then
+            index = search
+        else
+            break
+        end
+    end
+
+    if index then
+        return file:sub(1, index)
+    end
+
+    return "/"
+end
+
 function state:run(callback)
     local songs = {}
     local loads = {}
 
-    local items = love.filesystem.getDirectoryItems("songs")
+    local function explore(directory)
+        local items = love.filesystem.getDirectoryItems(directory)
 
-    for i, leaf in ipairs(items) do
-        local file = "songs/" .. leaf
+        for i, leaf in ipairs(items) do
+            local path = directory .. "/" .. leaf
 
-        if not loads[file] and love.filesystem.isFile(file) and file:sub(-6) == ".track" then
-            local load = love.filesystem.load(file)
+            if love.filesystem.isDirectory(path) then
+                explore(path)
+            elseif not loads[path] and love.filesystem.isFile(path) and path:sub(-6) == ".track" then
+                local load = love.filesystem.load(path)
 
-            if load ~= nil then
-                loads[file] = load()
-                table.insert(songs, file)
+                if load ~= nil then
+                    loads[path] = load()
+                    table.insert(songs, path)
+                    print(path)
+                end
             end
         end
     end
+
+    explore("songs")
 
     table.sort(songs, function(a, b)
         local i = loads[a].title .. " - " .. loads[a].author
@@ -83,16 +110,6 @@ function state:init()
     self.imageSelGamepad = love.graphics.newImage("assets/keys-gamepad/a.png")
     self.imageNavKeyboard = love.graphics.newImage("assets/keys-keyboard/arrows.png")
     self.imageSelKeyboard = love.graphics.newImage("assets/keys-keyboard/enter.png")
-end
-
-local function filepath(file)
-    local index = file:find("/", 2)
-
-    if index then
-        return file:sub(1, index)
-    end
-
-    return "/"
 end
 
 function state:enter(previous, callback, songs, loads)
@@ -443,15 +460,10 @@ function state:draw()
         -- local detail
         local detail = ""
 
-        -- if data then
-        --     local seconds = data:getDuration()
-        --     detail = util.secondsToTime(math.floor(seconds)) .. " - "
-        -- else
-        --     detail = "Loading... - "
-        -- end
-
-        detail = detail .. "BPM: " .. load.bpm .. ", " .. #load.notes .. " notes"
-        detail = detail .. ", " .. #load.lanes .. " fades"
+        detail = detail .. util.secondsToTime(math.ceil(load.length))
+        detail = detail .. "     " .. load.bpm .. " BPM"
+        detail = detail .. "     " .. #load.notes .. " notes"
+        detail = detail .. "     " .. #load.lanes .. " fades"
 
         love.graphics.setFont(self.detailFont)
         love.graphics.setColor(255, 255, 255, 200)
@@ -478,7 +490,7 @@ function state:draw()
     if settings.ignoreGamepad then
         joystick = nil
     end
-    
+
     local imageNav = joystick and self.imageNavGamepad or self.imageNavKeyboard
     local imageSel = joystick and self.imageSelGamepad or self.imageSelKeyboard
 

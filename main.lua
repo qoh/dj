@@ -1,3 +1,9 @@
+-- if love.filesystem.isFused() then
+if true then
+    local dir = love.filesystem.getSourceBaseDirectory()
+    local success = love.filesystem.mount(dir, "")
+end
+
 gamestate = require "lib.hump.gamestate"
 
 states = {

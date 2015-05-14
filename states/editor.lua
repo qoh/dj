@@ -111,6 +111,8 @@ function state:keypressed(key, unicode)
                 return a[1] < b[1]
             end)
 
+            self.song.length = self.audioData:getDuration()
+
             -- Write it out
             local real = love.filesystem.getRealDirectory(self.filename) .. "/" .. self.filename
             local file = io.open(real, "w")
