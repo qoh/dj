@@ -8,7 +8,9 @@ function state:init()
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
-function state:enter(previous, filename, song, data, startFromEditor)
+function state:enter(previous, filename, song, data, mods, startFromEditor)
+    self.mods = mods or {}
+
     self.filename = filename
     self.song = song
 
@@ -28,6 +30,7 @@ function state:enter(previous, filename, song, data, startFromEditor)
     self.combo = 0
     self.rewind = false
     self.noteUsed = {}
+    self.heldNotes = {}
     self.fadeUsed = {}
     self.laneUsed = {
         [1] = false,
@@ -178,6 +181,10 @@ function state:fadeHit(fade, offset)
 end
 
 function state:setFade(offset)
+    if self.song.mode == "5key" then
+        return
+    end
+
     self.fade = math.max(-1, math.min(1, offset))
     local position = self:getCurrentPosition()
 
@@ -209,6 +216,11 @@ function state:lanePressed(lane)
         if note[2] == lane and not self.noteUsed[note] then
             self.noteUsed[note] = true
             self:noteHit(note, offset)
+
+            if note[3] then
+                table.insert(self.heldNotes, {note, 0, 0})
+            end
+
             return
         end
     end
@@ -225,6 +237,12 @@ function state:lanePressed(lane)
 end
 
 function state:laneReleased(lane)
+    for i, note in ipairs(self.heldNotes) do
+        if note[1][2] == lane then
+            table.remove(self.heldNotes, i)
+            break
+        end
+    end
 end
 
 function state:activateEuphoria()
@@ -241,24 +259,52 @@ end
 function state:keypressed(key, unicode)
     if key == "escape" then
         self:escape()
-    elseif key == "kp1" or key == "," then
-        self:lanePressed(self.fade == -1 and 1 or 2)
-    elseif key == "kp2" or key == "." then
-        self:lanePressed(3)
-    elseif key == "kp3" or key == "/" then
-        self:lanePressed(self.fade == 1 and 5 or 4)
     elseif key == "kpenter" or key == "application" then
         self:activateEuphoria()
+    elseif self.song.mode == "5key" then
+        if key == "a" then
+            self:lanePressed(1)
+        elseif key == "s" then
+            self:lanePressed(2)
+        elseif key == "d" then
+            self:lanePressed(3)
+        elseif key == "f" then
+            self:lanePressed(4)
+        elseif key == "g" then
+            self:lanePressed(5)
+        end
+    else
+        if key == "kp1" or key == "," then
+            self:lanePressed(self.fade == -1 and 1 or 2)
+        elseif key == "kp2" or key == "." then
+            self:lanePressed(3)
+        elseif key == "kp3" or key == "/" then
+            self:lanePressed(self.fade == 1 and 5 or 4)
+        end
     end
 end
 
 function state:keyreleased(key, unicode)
-    if key == "kp1" then
-        self:laneReleased(self.fade == -1 and 1 or 2)
-    elseif key == "kp2" then
-        self:laneReleased(3)
-    elseif key == "kp3" then
-        self:laneReleased(self.fade == 1 and 5 or 4)
+    if self.song.mode == "5key" then
+        if key == "a" then
+            self:laneReleased(1)
+        elseif key == "s" then
+            self:laneReleased(2)
+        elseif key == "d" then
+            self:laneReleased(3)
+        elseif key == "f" then
+            self:laneReleased(4)
+        elseif key == "g" then
+            self:laneReleased(5)
+        end
+    else
+        if key == "kp1" or key == "," then
+            self:laneReleased(self.fade == -1 and 1 or 2)
+        elseif key == "kp2" or key == "." then
+            self:laneReleased(3)
+        elseif key == "kp3" or key == "/" then
+            self:laneReleased(self.fade == 1 and 5 or 4)
+        end
     end
 end
 
@@ -305,6 +351,20 @@ function state:gamepadreleased(joystick, key)
 end
 
 function state:isLanePressed(lane)
+    if self.song.mode == "5key" then
+        if lane == 1 then
+            return love.keyboard.isDown("a")
+        elseif lane == 2 then
+            return love.keyboard.isDown("s")
+        elseif lane == 3 then
+            return love.keyboard.isDown("d")
+        elseif lane == 4 then
+            return love.keyboard.isDown("f")
+        elseif lane == 5 then
+            return love.keyboard.isDown("g")
+        end
+    end
+
     local joystick = love.joystick.getJoysticks()[1]
 
     if settings.ignoreGamepad then
@@ -344,45 +404,47 @@ function state:update(dt)
     local position = self:getCurrentPosition()
 
     -- Handle proper fading
-    local fade = 0
-    local time = 0
+    if self.song.mode ~= "5key" then
+        local fade = 0
+        local time = 0
 
-    for i, entry in ipairs(self.song.lanes) do
-        if entry[1] < position then
-            fade = entry[2]
-        end
-    end
-
-    self.correctFade = fade
-
-    if fade ~= 0 then
-        -- Give points
-        if self.fade == fade then
-            self.faderPointTime = self.faderPointTime - dt
-
-            while self.faderPointTime <= 0 do
-                self.stats.score = self.stats.score + 10 * self:getMultiplier()
-                self.faderPointCount = self.faderPointCount + 1
-
-                if self.faderPointCount == 5 then
-                    self:increaseCombo()
-                    self.faderPointCount = 0
-                end
-
-                self.faderPointTime = self.faderPointTime + 0.2
+        for i, entry in ipairs(self.song.lanes) do
+            if entry[1] < position then
+                fade = entry[2]
             end
         end
 
-        -- Drop combo
-        if self.fade == fade then
-            self.faderErrorAccum = math.max(0, self.faderErrorAccum - dt)
-        else
-            self.faderErrorAccum = self.faderErrorAccum + dt
-            local threshold = 1 / (self.song.bpm / 60) / self.modifier
+        self.correctFade = fade
 
-            if self.faderErrorAccum > threshold then
-                self.faderErrorAccum = 0
-                self:loseCombo()
+        if fade ~= 0 then
+            -- Give points
+            if self.fade == fade then
+                self.faderPointTime = self.faderPointTime - dt
+
+                while self.faderPointTime <= 0 do
+                    self.stats.score = self.stats.score + 10 * self:getMultiplier()
+                    self.faderPointCount = self.faderPointCount + 1
+
+                    if self.faderPointCount == 5 then
+                        self:increaseCombo()
+                        self.faderPointCount = 0
+                    end
+
+                    self.faderPointTime = self.faderPointTime + 0.2
+                end
+            end
+
+            -- Drop combo
+            if self.fade == fade then
+                self.faderErrorAccum = math.max(0, self.faderErrorAccum - dt)
+            else
+                self.faderErrorAccum = self.faderErrorAccum + dt
+                local threshold = 1 / (self.song.bpm / 60) / self.modifier
+
+                if self.faderErrorAccum > threshold then
+                    self.faderErrorAccum = 0
+                    self:loseCombo()
+                end
             end
         end
     end
@@ -563,6 +625,32 @@ function state:update(dt)
         self.faderAnimRight = math.max(targetAnimRight, self.faderAnimRight - animChange)
     end
 
+    -- Handle held notes
+    local i = 1
+
+    while i <= #self.heldNotes do
+        local item = self.heldNotes[i]
+        local note = item[1]
+
+        if position >= note[1] + note[3] then
+            table.remove(self.heldNotes, i)
+        else
+            item[2] = item[2] + dt
+            item[3] = item[3] + dt
+
+            if self.shakeHit < 0.3 then
+                self.shakeHit = 0.3
+            end
+
+            while item[3] >= 0.1 do
+                self.stats.score = self.stats.score + 5 * self:getMultiplier()
+                item[3] = item[3] - 0.1
+            end
+
+            i = i + 1
+        end
+    end
+
     -- Check for missed notes
     if started and not spinning then
         for i, note in ipairs(self.song.notes) do
@@ -633,70 +721,24 @@ function state:draw()
         [3] = {  0, 127, 255},
     }
 
-    local colorsByLane = {
-        [1] = colors[1],
-        [2] = colors[1],
-        [3] = colors[2],
-        [4] = colors[3],
-        [5] = colors[3]
-    }
+    local colorsByLane
 
-    -- Find line segments for left and right lanes
-    local vertices_left  = {lanes[2], y}
-    local vertices_mid   = {lanes[3], y, lanes[3], 0}
-    local vertices_right = {lanes[4], y}
-
-    local i = 1
-
-    local last_offset = 0
-    local last_fading = 0
-
-    while i <= #self.song.lanes do
-        local offset = self.song.lanes[i][1] - position
-        local fading = self.song.lanes[i][2]
-
-        if y - offset * self:getBeatScale() < 0 then
-            break
-        end
-
-        if offset <= 0 then
-            vertices_left  = {lanes[fading == -1 and 1 or 2], y}
-            vertices_right = {lanes[fading ==  1 and 5 or 4], y}
-        elseif offset > 0 then
-            -- Do we need to shift insert a point in the left lane?
-            if (last_fading == -1 and fading ~= -1) or (last_fading ~= -1 and fading == -1) then
-                table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * self:getBeatScale())
-                table.insert(vertices_left,  lanes[     fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * self:getBeatScale())
-            end
-
-            if (last_fading ==  1 and fading ~=  1) or (last_fading ~=  1 and fading ==  1) then
-                table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * self:getBeatScale())
-                table.insert(vertices_right, lanes[     fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * self:getBeatScale())
-            end
-        end
-
-        last_offset = offset
-        last_fading = fading
-
-        i = i + 1
-    end
-
-    table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
-    table.insert(vertices_left,  0)
-    table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
-    table.insert(vertices_right, 0)
-
-    -- Get your wiggle game on
-    if (self.correctFade == -1 and self.fade ~= -1) or (self.correctFade ~= -1 and self.fade == -1) then
-        vertices_left = util.undulo(vertices_left)
-    end
-
-    if (self.correctFade == 1 and self.fade ~= 1) or (self.correctFade ~= 1 and self.fade == 1) then
-        vertices_right = util.undulo(vertices_right)
+    if self.song.mode == "5key" then
+        colorsByLane = {
+            [1] = {255, 255,  50},
+            [2] = {255, 100, 200},
+            [3] = {127, 255,  50},
+            [4] = {255, 127,  50},
+            [5] = { 50, 200, 255}
+        }
+    else
+        colorsByLane = {
+            [1] = colors[1],
+            [2] = colors[1],
+            [3] = colors[2],
+            [4] = colors[3],
+            [5] = colors[3]
+        }
     end
 
     love.graphics.push()
@@ -760,41 +802,110 @@ function state:draw()
 
     -- Draw controls for fading and notes
     love.graphics.setLineWidth(2)
-    draw_fader_back(lanes[1], y)
-    draw_fader_back(lanes[4], y)
-    draw_button(lanes[1] + self.faderAnimLeft  * 64, y, self:isLanePressed(1) and colors[1], self.laneUsed[1] and colors[1])
-    draw_button(lanes[3]                           , y, self:isLanePressed(2) and colors[2], self.laneUsed[2] and colors[2])
-    draw_button(lanes[4] + self.faderAnimRight * 64, y, self:isLanePressed(3) and colors[3], self.laneUsed[3] and colors[3])
+
+    if self.song.mode == "5key" then
+        draw_button(lanes[1], y, self:isLanePressed(1) and colorsByLane[1], colorsByLane[1])
+        draw_button(lanes[2], y, self:isLanePressed(2) and colorsByLane[2], colorsByLane[2])
+        draw_button(lanes[3], y, self:isLanePressed(3) and colorsByLane[3], colorsByLane[3])
+        draw_button(lanes[4], y, self:isLanePressed(4) and colorsByLane[4], colorsByLane[4])
+        draw_button(lanes[5], y, self:isLanePressed(5) and colorsByLane[5], colorsByLane[5])
+    else
+        draw_fader_back(lanes[1], y)
+        draw_fader_back(lanes[4], y)
+        draw_button(lanes[1] + self.faderAnimLeft  * 64, y, self:isLanePressed(1) and colors[1], self.laneUsed[1] and colors[1])
+        draw_button(lanes[3]                           , y, self:isLanePressed(2) and colors[2], self.laneUsed[2] and colors[2])
+        draw_button(lanes[4] + self.faderAnimRight * 64, y, self:isLanePressed(3) and colors[3], self.laneUsed[3] and colors[3])
+    end
 
     -- Draw lanes
-    local beat_strength = 1 - (position / 2 - math.floor(position / 2))
-    beat_strength = beat_strength ^ 2
+    if self.song.mode ~= "5key" then
+        -- Find line segments for left and right lanes
+        local vertices_left  = {lanes[2], y}
+        local vertices_mid   = {lanes[3], y, lanes[3], 0}
+        local vertices_right = {lanes[4], y}
 
-    love.graphics.setLineWidth(2)
-    love.graphics.setColor(127, 127, 127)
-    love.graphics.line(vertices_mid)
-    if self.laneFillAnim[2] > 0 then
-        love.graphics.setLineWidth(2 + 2 * beat_strength)
-        love.graphics.setColor(colors[2])
-        love.graphics.line(util.cutLine(vertices_mid, self.laneFillAnim[2]))
-    end
+        local i = 1
 
-    love.graphics.setLineWidth(2)
-    love.graphics.setColor(127, 127, 127)
-    love.graphics.line(vertices_left)
-    if self.laneFillAnim[1] > 0 then
-        love.graphics.setLineWidth(2 + 2 * beat_strength)
-        love.graphics.setColor(colors[1])
-        love.graphics.line(util.cutLine(vertices_left, self.laneFillAnim[1]))
-    end
+        local last_offset = 0
+        local last_fading = 0
 
-    love.graphics.setLineWidth(2)
-    love.graphics.setColor(127, 127, 127)
-    love.graphics.line(vertices_right)
-    if self.laneFillAnim[3] > 0 then
-        love.graphics.setLineWidth(2 + 2 * beat_strength)
-        love.graphics.setColor(colors[3])
-        love.graphics.line(util.cutLine(vertices_right, self.laneFillAnim[3]))
+        while i <= #self.song.lanes do
+            local offset = self.song.lanes[i][1] - position
+            local fading = self.song.lanes[i][2]
+
+            if y - offset * self:getBeatScale() < 0 then
+                break
+            end
+
+            if offset <= 0 then
+                vertices_left  = {lanes[fading == -1 and 1 or 2], y}
+                vertices_right = {lanes[fading ==  1 and 5 or 4], y}
+            elseif offset > 0 then
+                -- Do we need to shift insert a point in the left lane?
+                if (last_fading == -1 and fading ~= -1) or (last_fading ~= -1 and fading == -1) then
+                    table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
+                    table.insert(vertices_left,  y - offset * self:getBeatScale())
+                    table.insert(vertices_left,  lanes[     fading == -1 and 1 or 2])
+                    table.insert(vertices_left,  y - offset * self:getBeatScale())
+                end
+
+                if (last_fading ==  1 and fading ~=  1) or (last_fading ~=  1 and fading ==  1) then
+                    table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
+                    table.insert(vertices_right, y - offset * self:getBeatScale())
+                    table.insert(vertices_right, lanes[     fading ==  1 and 5 or 4])
+                    table.insert(vertices_right, y - offset * self:getBeatScale())
+                end
+            end
+
+            last_offset = offset
+            last_fading = fading
+
+            i = i + 1
+        end
+
+        table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
+        table.insert(vertices_left,  0)
+        table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
+        table.insert(vertices_right, 0)
+
+        -- Get your wiggle game on
+        if (self.correctFade == -1 and self.fade ~= -1) or (self.correctFade ~= -1 and self.fade == -1) then
+            vertices_left = util.undulo(vertices_left)
+        end
+
+        if (self.correctFade == 1 and self.fade ~= 1) or (self.correctFade ~= 1 and self.fade == 1) then
+            vertices_right = util.undulo(vertices_right)
+        end
+
+        local beat_strength = 1 - (position / 2 - math.floor(position / 2))
+        beat_strength = beat_strength ^ 2
+
+        love.graphics.setLineWidth(2)
+        love.graphics.setColor(127, 127, 127)
+        love.graphics.line(vertices_mid)
+        if self.laneFillAnim[2] > 0 then
+            love.graphics.setLineWidth(2 + 2 * beat_strength)
+            love.graphics.setColor(colors[2])
+            love.graphics.line(util.cutLine(vertices_mid, self.laneFillAnim[2]))
+        end
+
+        love.graphics.setLineWidth(2)
+        love.graphics.setColor(127, 127, 127)
+        love.graphics.line(vertices_left)
+        if self.laneFillAnim[1] > 0 then
+            love.graphics.setLineWidth(2 + 2 * beat_strength)
+            love.graphics.setColor(colors[1])
+            love.graphics.line(util.cutLine(vertices_left, self.laneFillAnim[1]))
+        end
+
+        love.graphics.setLineWidth(2)
+        love.graphics.setColor(127, 127, 127)
+        love.graphics.line(vertices_right)
+        if self.laneFillAnim[3] > 0 then
+            love.graphics.setLineWidth(2 + 2 * beat_strength)
+            love.graphics.setColor(colors[3])
+            love.graphics.line(util.cutLine(vertices_right, self.laneFillAnim[3]))
+        end
     end
 
     -- Draw notes
@@ -805,27 +916,72 @@ function state:draw()
             local last = offset + note[3]
 
             if last >= 0 then
+                local old = false
                 local color = colorsByLane[note[2]]
                 local length = note[3]
 
                 if offset < 0 then
+                    old = true
                     length = length + offset
                     offset = 0
                 end
 
-                love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- This is very inefficient
+                local held
+
+                for i, each in ipairs(self.heldNotes) do
+                    if each[1] == note then
+                        held = each
+                        break
+                    end
+                end
+
+                if held then
+                    local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                    local o65 = 0.65 + flash
+
+                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                elseif not old then
+                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                else
+                    love.graphics.setColor(60, 60, 60)
+                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(25, 25, 25)
+                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(60, 60, 60)
+                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                    love.graphics.setColor(25, 25, 25)
+                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                end
             end
         elseif not self.noteUsed[note] and offset >= 0 then
             local color = colorsByLane[note[2]]
@@ -886,7 +1042,7 @@ function state:draw()
 
         love.graphics.setColor(255, 255, 255, 255 * fade)
         love.graphics.setFont(self.messageFont)
-        love.graphics.printf(self.song.title .. " - " .. self.song.author, 128, height / 3 - 24, width - 256, "center")
+        love.graphics.printf(self.song.author .. " - " .. self.song.title, 128, height / 3 - 24, width - 256, "center")
     end
 
     -- Draw subtitles

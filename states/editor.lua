@@ -10,10 +10,11 @@ function state:init()
     self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
 end
 
-function state:enter(previous, filename, song, data)
+function state:enter(previous, filename, song, data, mods)
     self.filename = filename
     -- self.song = love.filesystem.load(filename)()
     self.song = song
+    self.mods = mods or {}
 
     -- self.audioData = love.sound.newSoundData("songs/" .. self.song.audio)
     self.audioData = data
@@ -127,7 +128,7 @@ function state:keypressed(key, unicode)
 
             print("Saved!")
         elseif key == "p" then
-            gamestate.push(states.game, self.filename, self.song, self.audioData, self:getPosition())
+            gamestate.push(states.game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
         end
     end
 end
@@ -221,16 +222,18 @@ function state:update(dt)
         end
     end
 
-    -- Play lane switch sounds
-    local last = 0
+    if self.song.mode ~= "5key" then
+        -- Play lane switch sounds
+        local last = 0
 
-    for i, lane in ipairs(self.song.lanes) do
-        if lane[2] ~= last and a <= lane[1] and b > lane[1] then
-            self.fadeSound:clone():play()
-            break
+        for i, lane in ipairs(self.song.lanes) do
+            if lane[2] ~= last and a <= lane[1] and b > lane[1] then
+                self.fadeSound:clone():play()
+                break
+            end
+
+            last = lane[2]
         end
-
-        last = lane[2]
     end
 
     -- Update temporary note position
@@ -253,7 +256,7 @@ function state:update(dt)
     self.mouseBeat = math.floor(self.mouseBeat * snap + 0.5) / snap
 
     -- Add lane changes
-    if love.mouse.isDown("m") then
+    if self.song.mode ~= "5key" and love.mouse.isDown("m") then
         local f_set = 0
         local f_legal = {[-1] = false, [0] = false, [1] = false}
 
@@ -362,62 +365,25 @@ function state:draw()
         [3] = {  0, 127, 255},
     }
 
-    local colorsByLane = {
-        [1] = colors[1],
-        [2] = colors[1],
-        [3] = colors[2],
-        [4] = colors[3],
-        [5] = colors[3]
-    }
+    local colorsByLane
 
-    -- Find line segments for left and right lanes
-    local vertices_left  = {lanes[2], y}
-    local vertices_mid   = {lanes[3], y, lanes[3], 0}
-    local vertices_right = {lanes[4], y}
-
-    local i = 1
-
-    local last_offset = 0
-    local last_fading = 0
-
-    while i <= #self.song.lanes do
-        local offset = self.song.lanes[i][1] - position
-        local fading = self.song.lanes[i][2]
-
-        if y - offset * BEAT_SCALE < 0 then
-            break
-        end
-
-        if offset <= 0 then
-            vertices_left  = {lanes[fading == -1 and 1 or 2], y}
-            vertices_right = {lanes[fading ==  1 and 5 or 4], y}
-        elseif offset > 0 then
-            -- Do we need to shift insert a point in the left lane?
-            if (last_fading == -1 and fading ~= -1) or (last_fading ~= -1 and fading == -1) then
-                table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * BEAT_SCALE)
-                table.insert(vertices_left,  lanes[     fading == -1 and 1 or 2])
-                table.insert(vertices_left,  y - offset * BEAT_SCALE)
-            end
-
-            if (last_fading ==  1 and fading ~=  1) or (last_fading ~=  1 and fading ==  1) then
-                table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * BEAT_SCALE)
-                table.insert(vertices_right, lanes[     fading ==  1 and 5 or 4])
-                table.insert(vertices_right, y - offset * BEAT_SCALE)
-            end
-        end
-
-        last_offset = offset
-        last_fading = fading
-
-        i = i + 1
+    if self.song.mode == "5key" then
+        colorsByLane = {
+            [1] = {255, 255,  50},
+            [2] = {255, 100, 200},
+            [3] = {127, 255,  50},
+            [4] = {255, 127,  50},
+            [5] = { 50, 200, 255}
+        }
+    else
+        colorsByLane = {
+            [1] = colors[1],
+            [2] = colors[1],
+            [3] = colors[2],
+            [4] = colors[3],
+            [5] = colors[3]
+        }
     end
-
-    table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
-    table.insert(vertices_left,  0)
-    table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
-    table.insert(vertices_right, 0)
 
     -- Draw scratchboard
     love.graphics.setColor(30, 30, 30)
@@ -446,50 +412,110 @@ function state:draw()
 
     -- Draw controls for fading and notes
     love.graphics.setLineWidth(2)
-    draw_fader_back(lanes[1], y)
-    draw_fader_back(lanes[4], y)
-    --draw_button(lanes[1] + 64, y, nil, colors[1])
-    draw_button(lanes[3]     , y, nil, colors[2])
-    --draw_button(lanes[4] +  0, y, nil, colors[3])
 
-    -- Draw lane switches
-    local last_beat
-    local last_fade = 0
-
-    for i, lane in ipairs(self.song.lanes) do
-        local offset = lane[1] - position
-
-        if offset >= 0 and lane[2] ~= last_fade then
-            if lane[1] == last then
-                love.graphics.setColor(255, 0, 0)
-                love.graphics.setLineWidth(4)
-            else
-                love.graphics.setColor(255, 0, 255, 100)
-                love.graphics.setLineWidth(4)
-            end
-
-            love.graphics.line(x - 192, y - offset * BEAT_SCALE, x + 192, y - offset * BEAT_SCALE)
-        end
-
-        last_beat = lane[1]
-        last_fade = lane[2]
+    if self.song.mode == "5key" then
+        draw_button(lanes[1], y, colorsByLane[1], colorsByLane[1])
+        draw_button(lanes[2], y, colorsByLane[2], colorsByLane[2])
+        draw_button(lanes[3], y, colorsByLane[3], colorsByLane[3])
+        draw_button(lanes[4], y, colorsByLane[4], colorsByLane[4])
+        draw_button(lanes[5], y, colorsByLane[5], colorsByLane[5])
+    else
+        draw_fader_back(lanes[1], y)
+        draw_fader_back(lanes[4], y)
+        --draw_button(lanes[1] + 64, y, nil, colors[1])
+        draw_button(lanes[3]     , y, nil, colors[2])
+        --draw_button(lanes[4] +  0, y, nil, colors[3])
     end
 
-    -- Draw lanes
-    local beat_strength = 1 - (position / 2 - math.floor(position / 2))
-    beat_strength = beat_strength ^ 2
+    if self.song.mode ~= "5key" then
+        -- Draw lane switches
+        local last_beat
+        local last_fade = 0
 
-    love.graphics.setLineWidth(2 + 2 * beat_strength)
-    love.graphics.setColor(colors[2])
-    love.graphics.line(vertices_mid)
+        for i, lane in ipairs(self.song.lanes) do
+            local offset = lane[1] - position
 
-    love.graphics.setLineWidth(2 + 2 * beat_strength)
-    love.graphics.setColor(colors[1])
-    love.graphics.line(vertices_left)
+            if offset >= 0 and lane[2] ~= last_fade then
+                if lane[1] == last then
+                    love.graphics.setColor(255, 0, 0)
+                    love.graphics.setLineWidth(4)
+                else
+                    love.graphics.setColor(255, 0, 255, 100)
+                    love.graphics.setLineWidth(4)
+                end
 
-    love.graphics.setLineWidth(2 + 2 * beat_strength)
-    love.graphics.setColor(colors[3])
-    love.graphics.line(vertices_right)
+                love.graphics.line(x - 192, y - offset * BEAT_SCALE, x + 192, y - offset * BEAT_SCALE)
+            end
+
+            last_beat = lane[1]
+            last_fade = lane[2]
+        end
+
+        -- Find line segments for left and right lanes
+        local vertices_left  = {lanes[2], y}
+        local vertices_mid   = {lanes[3], y, lanes[3], 0}
+        local vertices_right = {lanes[4], y}
+
+        local i = 1
+
+        local last_offset = 0
+        local last_fading = 0
+
+        while i <= #self.song.lanes do
+            local offset = self.song.lanes[i][1] - position
+            local fading = self.song.lanes[i][2]
+
+            if y - offset * BEAT_SCALE < 0 then
+                break
+            end
+
+            if offset <= 0 then
+                vertices_left  = {lanes[fading == -1 and 1 or 2], y}
+                vertices_right = {lanes[fading ==  1 and 5 or 4], y}
+            elseif offset > 0 then
+                -- Do we need to shift insert a point in the left lane?
+                if (last_fading == -1 and fading ~= -1) or (last_fading ~= -1 and fading == -1) then
+                    table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
+                    table.insert(vertices_left,  y - offset * BEAT_SCALE)
+                    table.insert(vertices_left,  lanes[     fading == -1 and 1 or 2])
+                    table.insert(vertices_left,  y - offset * BEAT_SCALE)
+                end
+
+                if (last_fading ==  1 and fading ~=  1) or (last_fading ~=  1 and fading ==  1) then
+                    table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
+                    table.insert(vertices_right, y - offset * BEAT_SCALE)
+                    table.insert(vertices_right, lanes[     fading ==  1 and 5 or 4])
+                    table.insert(vertices_right, y - offset * BEAT_SCALE)
+                end
+            end
+
+            last_offset = offset
+            last_fading = fading
+
+            i = i + 1
+        end
+
+        table.insert(vertices_left,  lanes[last_fading == -1 and 1 or 2])
+        table.insert(vertices_left,  0)
+        table.insert(vertices_right, lanes[last_fading ==  1 and 5 or 4])
+        table.insert(vertices_right, 0)
+
+        -- Draw lanes
+        local beat_strength = 1 - (position / 2 - math.floor(position / 2))
+        beat_strength = beat_strength ^ 2
+
+        love.graphics.setLineWidth(2 + 2 * beat_strength)
+        love.graphics.setColor(colors[2])
+        love.graphics.line(vertices_mid)
+
+        love.graphics.setLineWidth(2 + 2 * beat_strength)
+        love.graphics.setColor(colors[1])
+        love.graphics.line(vertices_left)
+
+        love.graphics.setLineWidth(2 + 2 * beat_strength)
+        love.graphics.setColor(colors[3])
+        love.graphics.line(vertices_right)
+    end
 
     -- Draw notes
     for i, note in ipairs(self.song.notes) do

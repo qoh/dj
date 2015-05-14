@@ -4,15 +4,17 @@ function state:init()
     self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
     self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 
+    local mods = {}
+
     self.items = {
         {"Play", function()
             states.songselect:run(function(filename, song, data)
-            	gamestate.switch(states.game, filename, song, data)
+            	gamestate.switch(states.game, filename, song, data, mods)
             end)
         end},
         {"Edit a track", function()
             states.songselect:run(function(filename, song, data)
-            	gamestate.switch(states.editor, filename, song, data)
+            	gamestate.switch(states.editor, filename, song, data, mods)
             end)
         end},
         {"Help & controls", function() gamestate.switch(states.help) end},
