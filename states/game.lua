@@ -28,6 +28,7 @@ function state:enter(previous, filename, song, data, startFromEditor)
     self.combo = 0
     self.rewind = false
     self.noteUsed = {}
+    self.fadeUsed = {}
     self.laneUsed = {
         [1] = false,
         [2] = false,
@@ -166,8 +167,33 @@ function state:noteMiss(note)
     end
 end
 
+function state:fadeHit(fade, offset)
+    self.shakeHit = math.min(1, self.shakeHit + 0.12)
+
+    -- self.stats.hitCount = self.stats.hitCount + 1
+    -- self.stats.totalOffset = self.stats.totalOffset + offset
+    self.stats.score = self.stats.score + 100 * self:getMultiplier()
+
+    self:increaseCombo()
+end
+
 function state:setFade(offset)
     self.fade = math.max(-1, math.min(1, offset))
+    local position = self:getCurrentPosition()
+
+    for i, fade in ipairs(self.song.lanes) do
+        local offset = fade[1] - position
+
+        if offset > 0.5 then
+            break
+        end
+
+        if offset > -0.5 and fade[2] == self.fade and not self.fadeUsed[fade] then
+            self.fadeUsed[fade] = true
+            self:fadeHit(fade, offset)
+            return
+        end
+    end
 end
 
 function state:lanePressed(lane)
