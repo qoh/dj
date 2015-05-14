@@ -1,47 +1,3 @@
--- local threaded = ...
---
--- if threaded == true then
---     require "love.sound"
---     require "love.graphics"
---
---     local requests = love.thread.getChannel("songselect-requests")
---     local response = love.thread.getChannel("songselect-response")
---
---     while true do
---         local request = requests:demand()
---
---         if request == false then
---             response:supply(false)
---             break
---         end
---
---         local type = request[1]
---         local path = request[2]
---
---         print("Trying to load " .. type .. ": " .. path)
---
---         local resource
---
---         if type == "image" then
---             print("yeah, loading!")
---             -- resource = love.graphics.newImage(path)
---             local status, result = pcall(function() love.graphics.newImage(path) end)
---             print(status, result)
---             resource = result
---             print("woo")
---         elseif type == "sound" then
---             resource = love.sound.newSoundData(path)
---         end
---
---         print("OK")
---
---         response:push{type, path, resource}
---     end
---
---     return
--- end
---
--- local thisFile = (...):gsub("%.", "/") .. ".lua"
 local util = require "lib.util"
 local state = {}
 
@@ -118,29 +74,14 @@ function state:enter(previous, callback, songs, loads)
     self.loads = loads
     self.selected = false
     self.source = nil
+    self.stickScrollTime = nil
 
     self.fadingSounds = {}
     self.fadingImages = {}
 
-    self.durations = {}
     self.images = {}
 
-    -- for name, load in pairs(self.loads) do
-    --     if load.image then
-    --         local file = filepath(name) .. load.image
-    --
-    --         if self.dataImage[file] == nil then
-    --             self.dataImage[file] = false
-    --         end
-    --     end
-    -- end
-
     self:select(1)
-
-    -- self.loader = love.thread.newThread(thisFile)
-    -- self.loader:start(true)
-    -- self.loaderBusy = false
-    -- self.loaderDone = false
 
     love.graphics.setBackgroundColor(50, 50, 50)
     love.keyboard.setKeyRepeat(true)
@@ -168,11 +109,6 @@ function state:leave()
 
     collectgarbage()
 end
-
--- function love.threaderror(a, b, c)
---     print("threaderror")
---     print(a, b, c)
--- end
 
 function state:select(index)
     local selected = self.selected
@@ -253,102 +189,30 @@ function state:keypressed(key, unicode)
 end
 
 function state:update(dt)
-    -- if self.loader then
-    --     local error = self.loader:getError()
-    --
-    --     if error then
-    --         print("------------")
-    --         print("Error in loader: " .. error)
-    --         self.loader = nil
-    --     end
-    -- end
-    --
-    -- if self.loader and self.loader:isRunning() then
-    --     local response = love.thread.getChannel("songselect-response"):pop()
-    --
-    --     if self.loaderBusy and response then
-    --         print("Loaded " .. response[1] .. ": " .. response[2])
-    --
-    --         local type = response[1]
-    --         local file = response[2]
-    --         local data = response[3]
-    --
-    --         if type == "image" then
-    --             self.dataImage[file] = data
-    --         elseif type == "sound" then
-    --             self.dataSound[file] = data
-    --
-    --             local name = self.songs[self.selected]
-    --             local desired = filepath(name) .. self.loads[name].audio
-    --
-    --             if file == desired and not self.source then
-    --                 self.source = love.audio.newSource(response[2])
-    --                 self.source:play()
-    --                 self.source:seek(30.5)
-    --                 self.source:setVolume(0)
-    --             end
-    --         end
-    --
-    --         self.loaderBusy = false
-    --     end
-    --
-    --     if not self.loaderBusy and not self.loaderDone then
-    --         print("Making request")
-    --         local request = false
-    --
-    --         -- First, check if the currently selected song is done loading
-    --         local name = self.songs[self.selected]
-    --         local path = filepath(name)
-    --         local load = self.loads[name]
-    --
-    --         if load.image and self.dataImage[path .. load.image] == false then
-    --             request = {"image", path .. load.image}
-    --         elseif self.dataSound[path .. load.audio] == false then
-    --             request = {"sound", path .. load.audio}
-    --         else -- Pick an arbitrary one
-    --             -- This is pretty bad.
-    --             for key, value in pairs(self.dataSound) do
-    --                 if value == false then
-    --                     request = {"sound", key}
-    --                     break
-    --                 end
-    --             end
-    --
-    --             if request == false then
-    --                 for key, value in pairs(self.dataImage) do
-    --                     if value == false then
-    --                         request = {"image", key}
-    --                         break
-    --                     end
-    --                 end
-    --             end
-    --         end
-    --
-    --         if request == false then
-    --             self.loaderDone = true
-    --             print("Done loading")
-    --         else
-    --             self.loaderBusy = true
-    --             print("Requesting " .. request[1] .. ": " .. request[2])
-    --         end
-    --
-    --         love.thread.getChannel("songselect-requests"):push(request)
-    --     end
-    --
-    --     -- local requests = love.thread.getChannel("songselect-requests")
-    --     --
-    --     -- if response then
-    --     --     print("Loaded " .. response[1])
-    --     --     self.datas[response[1]] = response[2]
-    --     --
-    --     --     if self.songs[self.selected] == response[1] and not self.source then
-    --     --         self.source = love.audio.newSource(response[2])
-    --     --         self.source:play()
-    --     --         self.source:seek(30.5)
-    --     --         self.source:setVolume(0)
-    --     --     end
-    --     -- end
-    -- end
+    local joystick = love.joystick.getJoysticks()[1]
+
+    if joystick then
+        local value = joystick:getGamepadAxis("lefty")
+        local speed = 1 - (math.abs(value) - 0.25) / 0.75 + 0.1
+
+        if math.abs(value) > 0.25 then
+            local delta = value < 0 and -1 or 1
+
+            if self.stickScrollTime then
+                while self.stickScrollTime <= 0 do
+                    self:select(self.selected + delta)
+                    self.stickScrollTime = self.stickScrollTime + speed
+                end
+
+                self.stickScrollTime = self.stickScrollTime - dt
+            else
+                self:select(self.selected + delta)
+                self.stickScrollTime = 0.4
+            end
+        else
+            self.stickScrollTime = nil
+        end
+    end
 
     -- Fade out images
     local i = 1
@@ -455,15 +319,11 @@ function state:draw()
         love.graphics.setColor(255, 255, 255)
         love.graphics.print(shown, x + 8, y + 8)
 
-        -- local data = self.datas[file]
-        -- local data = nil
-        -- local detail
-        local detail = ""
-
-        detail = detail .. util.secondsToTime(math.ceil(load.length))
-        detail = detail .. "     " .. load.bpm .. " BPM"
-        detail = detail .. "     " .. #load.notes .. " notes"
-        detail = detail .. "     " .. #load.lanes .. " fades"
+        local detail =
+            util.secondsToTime(math.ceil(load.length))
+            .. "     " .. load.bpm .. " BPM"
+            .. "     " .. #load.notes .. " notes"
+            .. "     " .. #load.lanes .. " fades"
 
         love.graphics.setFont(self.detailFont)
         love.graphics.setColor(255, 255, 255, 200)
