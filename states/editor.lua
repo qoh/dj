@@ -31,6 +31,11 @@ function state:enter(previous, filename, song, data)
 end
 
 function state:leave()
+    self.audioSource:stop()
+    self.audioSource = nil
+    self.audioData = nil
+    self.song = nil
+
     love.keyboard.setKeyRepeat(false)
 end
 
@@ -122,7 +127,7 @@ function state:keypressed(key, unicode)
 
             print("Saved!")
         elseif key == "p" then
-            gamestate.push(states.game, self.song, self.audioData, self:getPosition())
+            gamestate.push(states.game, self.filename, self.song, self.audioData, self:getPosition())
         end
     end
 end
@@ -447,6 +452,29 @@ function state:draw()
     draw_button(lanes[3]     , y, nil, colors[2])
     --draw_button(lanes[4] +  0, y, nil, colors[3])
 
+    -- Draw lane switches
+    local last_beat
+    local last_fade = 0
+
+    for i, lane in ipairs(self.song.lanes) do
+        local offset = lane[1] - position
+
+        if offset >= 0 and lane[2] ~= last_fade then
+            if lane[1] == last then
+                love.graphics.setColor(255, 0, 0)
+                love.graphics.setLineWidth(4)
+            else
+                love.graphics.setColor(255, 0, 255, 100)
+                love.graphics.setLineWidth(4)
+            end
+
+            love.graphics.line(x - 192, y - offset * BEAT_SCALE, x + 192, y - offset * BEAT_SCALE)
+        end
+
+        last_beat = lane[1]
+        last_fade = lane[2]
+    end
+
     -- Draw lanes
     local beat_strength = 1 - (position / 2 - math.floor(position / 2))
     beat_strength = beat_strength ^ 2
@@ -462,29 +490,6 @@ function state:draw()
     love.graphics.setLineWidth(2 + 2 * beat_strength)
     love.graphics.setColor(colors[3])
     love.graphics.line(vertices_right)
-
-    -- Draw lane switches
-    local last_beat
-    local last_fade = 0
-
-    for i, lane in ipairs(self.song.lanes) do
-        local offset = lane[1] - position
-
-        if offset >= 0 and lane[2] ~= last_fade then
-            if lane[1] == last then
-                love.graphics.setColor(255, 0, 0)
-                love.graphics.setLineWidth(4)
-            else
-                love.graphics.setColor(255, 0, 255)
-                love.graphics.setLineWidth(1)
-            end
-
-            love.graphics.line(x - 192, y - offset * BEAT_SCALE, x + 192, y - offset * BEAT_SCALE)
-        end
-
-        last_beat = lane[1]
-        last_fade = lane[2]
-    end
 
     -- Draw notes
     for i, note in ipairs(self.song.notes) do

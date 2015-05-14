@@ -7,7 +7,7 @@ function state:init()
     self.items = {
         {"Play", function()
             states.songselect:run(function(filename, song, data)
-            	gamestate.switch(states.game, song, data)
+            	gamestate.switch(states.game, filename, song, data)
             end)
         end},
         {"Edit a track", function()

@@ -1,5 +1,25 @@
 local util = {}
 
+function util.filepath(file)
+    local index
+
+    while true do
+        local search = file:find("/", (index or 1) + 1, true)
+
+        if search then
+            index = search
+        else
+            break
+        end
+    end
+
+    if index then
+        return file:sub(1, index)
+    end
+
+    return "/"
+end
+
 function util.secondsToTime(seconds)
     local minutes = math.floor(seconds / 60)
     seconds = tostring((seconds - minutes * 60))
@@ -13,18 +33,32 @@ function util.secondsToTime(seconds)
     return minutes .. ":" .. seconds
 end
 
-function util.addSeparators(value)
-    value = tostring(math.floor(value))
+function util.addSeparators(value, forceFraction)
+    plain = tostring(math.abs(math.floor(value)))
 
     local result = ""
-    local i = #value - 2
+    local i = #plain - 2
 
     while i >= 2 do
-        result = "," .. value:sub(i, i + 2) .. result
+        result = "," .. plain:sub(i, i + 2) .. result
         i = i - 3
     end
 
-    return value:sub(1, i + 2) .. result
+    result = plain:sub(1, i + 2) .. result
+
+    if value < 0 then
+        result = "-" .. result
+    end
+
+    local fraction = value - math.floor(value)
+
+    if fraction > 0 then
+        result = result .. tostring(fraction):sub(2)
+    elseif forceFraction then
+        result = result .. ".0"
+    end
+
+    return result
 end
 
 function util.undulo(segments)

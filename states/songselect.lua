@@ -1,26 +1,6 @@
 local util = require "lib.util"
 local state = {}
 
-local function filepath(file)
-    local index
-
-    while true do
-        local search = file:find("/", (index or 1) + 1, true)
-
-        if search then
-            index = search
-        else
-            break
-        end
-    end
-
-    if index then
-        return file:sub(1, index)
-    end
-
-    return "/"
-end
-
 function state:run(callback)
     local songs = {}
     local loads = {}
@@ -39,7 +19,6 @@ function state:run(callback)
                 if load ~= nil then
                     loads[path] = load()
                     table.insert(songs, path)
-                    print(path)
                 end
             end
         end
@@ -120,13 +99,13 @@ function state:select(index)
 
     if selected then
         prevName = self.songs[selected]
-        prevImageFile = self.loads[prevName].image and (filepath(prevName) .. self.loads[prevName].image)
-        prevSoundFile = filepath(prevName) .. self.loads[prevName].audio
+        prevImageFile = self.loads[prevName].image and (util.filepath(prevName) .. self.loads[prevName].image)
+        prevSoundFile = util.filepath(prevName) .. self.loads[prevName].audio
     end
 
     local currName = self.songs[self.selected]
-    local currImageFile = self.loads[currName].image and (filepath(currName) .. self.loads[currName].image)
-    local currSoundFile = filepath(currName) .. self.loads[currName].audio
+    local currImageFile = self.loads[currName].image and (util.filepath(currName) .. self.loads[currName].image)
+    local currSoundFile = util.filepath(currName) .. self.loads[currName].audio
 
     if prevImageFile ~= currImageFile and self.images[prevImageFile] ~= nil and self.images[prevImageFile] ~= false then
         table.insert(self.fadingImages, {self.images[prevImageFile], 1})
@@ -160,7 +139,7 @@ function state:continue()
     local name = self.songs[self.selected]
     local load = self.loads[name]
 
-    local soundData = love.sound.newSoundData(filepath(name) .. load.audio)
+    local soundData = love.sound.newSoundData(util.filepath(name) .. load.audio)
     self.callback(name, load, soundData)
 end
 
@@ -258,7 +237,7 @@ function state:draw()
         local load = self.loads[file]
 
         if load.image then
-            local image = self.images[filepath(file) .. load.image]
+            local image = self.images[util.filepath(file) .. load.image]
 
             if image then
                 local w, h = image:getDimensions()

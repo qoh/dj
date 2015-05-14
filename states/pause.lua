@@ -6,6 +6,7 @@ function state:init()
 
     self.items = {
         {"Resume", function() self.closing = true end},
+        {"Restart song", function() gamestate.switch(states.game, self.previous.filename, self.previous.song, self.previous.audioData) end},
         {"Back to menu", function() gamestate.switch(states.menu) end},
         {"Exit game", love.event.quit}
     }

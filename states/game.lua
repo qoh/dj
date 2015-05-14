@@ -1,18 +1,6 @@
 local util = require "lib.util"
 local state = {}
 
--- function state:run(filename)
---     if love.filesystem.isFile("delaytest.txt") then
---         local delay = love.filesystem.read("delaytest.txt")
---         gamestate.switch(self, tonumber(delay), filename)
---     else
---         gamestate.switch(states.delaytest, function(delay)
---             love.filesystem.write("delaytest.txt", tostring(delay))
---             gamestate.switch(self, delay, filename)
---         end)
---     end
--- end
-
 function state:init()
     self.regularFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
     self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
@@ -20,7 +8,8 @@ function state:init()
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
-function state:enter(previous, song, data, startFromEditor)
+function state:enter(previous, filename, song, data, startFromEditor)
+    self.filename = filename
     self.song = song
 
     self.stats = {
@@ -76,6 +65,7 @@ function state:enter(previous, song, data, startFromEditor)
 end
 
 function state:leave()
+    self.startFromEditor = false
     self.song = nil
 
     self.audioSource:stop()
@@ -248,6 +238,15 @@ function state:gamepadpressed(joystick, key)
     elseif key == "b" then
         self:lanePressed(self.fade == 1 and 5 or 4)
     elseif key == "y" then
+        self:lanePressed(self.fade == -1 and 1 or 2)
+        self:lanePressed(self.fade == 1 and 5 or 4)
+    elseif key == "leftshoulder" then
+        self:lanePressed(self.fade == -1 and 1 or 2)
+        self:lanePressed(3)
+    elseif key == "rightshoulder" then
+        self:lanePressed(3)
+        self:lanePressed(self.fade == 1 and 5 or 4)
+    elseif key == "back" then
         self:activateEuphoria()
     end
 end
@@ -258,6 +257,15 @@ function state:gamepadreleased(joystick, key)
     elseif key == "a" then
         self:laneReleased(3)
     elseif key == "b" then
+        self:laneReleased(self.fade == 1 and 5 or 4)
+    elseif key == "y" then
+        self:laneReleased(self.fade == -1 and 1 or 2)
+        self:laneReleased(self.fade == 1 and 5 or 4)
+    elseif key == "leftshoulder" then
+        self:laneReleased(self.fade == -1 and 1 or 2)
+        self:laneReleased(3)
+    elseif key == "rightshoulder" then
+        self:laneReleased(3)
         self:laneReleased(self.fade == 1 and 5 or 4)
     end
 end
@@ -283,7 +291,7 @@ function state:update(dt)
         if self.startFromEditor then
             gamestate.pop()
         else
-            gamestate.switch(states.win, self.stats)
+            gamestate.switch(states.win, self.filename, self.song, self.stats)
         end
 
         return
@@ -710,6 +718,12 @@ function state:draw()
         love.graphics.printf("REWIND", x + 120, y - 64 - 7 * 12 - 35 - 24, 64, "right")
     end
 
+    local rating = (1 - self.stats.missCount / self.stats.noteCount)
+    rating = math.floor(rating * 1000 + 0.5) / 10
+    love.graphics.setFont(self.regularFont)
+    love.graphics.setColor(200, 100, 30)
+    love.graphics.printf(rating, x + 120 - 200, y - 64 - 7 * 12 - 35 - 24 - 30, 64 + 200, "right")
+
     -- Draw controls for fading and notes
     love.graphics.setLineWidth(2)
     draw_fader_back(lanes[1], y)
@@ -920,9 +934,9 @@ function state:draw()
             love.graphics.printf("Left", sdx - 32, 108, 64, "center")
 
             -- Draw the X/A/B buttons
-            button(width - 32 - 32 - 8 - 32 - 8 - 32, 48, "X", joystick:isGamepadDown("x"))
+            button(width - 32 - 32 - 8 - 32 - 8 - 32, 48, "X", joystick:isGamepadDown("x") or joystick:isGamepadDown("y"))
             button(width - 32 - 32 - 8 - 32, 48, "A", joystick:isGamepadDown("a"))
-            button(width - 32 - 32, 48, "B", joystick:isGamepadDown("b"))
+            button(width - 32 - 32, 48, "B", joystick:isGamepadDown("b") or joystick:isGamepadDown("y"))
         else
             local function button(x, y, label, state)
                 love.graphics.setFont(self.messageFont)
