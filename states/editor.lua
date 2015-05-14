@@ -5,7 +5,7 @@ local state = {}
 
 function state:init()
     self.markerFont = love.graphics.newFont(12)
-    self.timeFont = love.graphics.newFont(16)
+    self.timeFont = love.graphics.newFont("assets/fonts/Roboto-Light.ttf", 14)
     self.hitSound = love.audio.newSource("assets/Laser_Shoot12.wav")
     self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
 end
@@ -542,33 +542,52 @@ function state:draw()
         love.graphics.print(self.mouseBeat, lanes[self.mouseLane], y - offset * BEAT_SCALE)
     end
 
-    local bw = width - 16
-    local bh = 16
-    local bx = 8
-    local by = height - bh - 8
+    local bw = width
+    local bh = 8
+    local bx = 0
+    local by = height - bh
 
     local position = self.audioSource:tell()
     local duration = self.audioData:getDuration()
     local progress = position / duration
 
+    love.graphics.setFont(self.timeFont)
     love.graphics.setColor(80, 80, 80)
     love.graphics.rectangle("fill", bx, by, bw, bh)
     love.graphics.setColor(255, 255, 255)
-    love.graphics.printf(util.secondsToTime(math.ceil(duration)), bx, by + 1, bw - 2, "right")
-    love.graphics.setColor(200, 255, 200)
+    -- love.graphics.printf(util.secondsToTime(math.ceil(duration)), bx, by + 1, bw - 2, "right")
+
+    -- Draw all notes on the progress bar
+    -- This is probably a bad idea.
+    love.graphics.setLineWidth(1)
+
+    for i, note in ipairs(self.song.notes) do
+        local position = note[1] * (1 / (self.song.bpm / 60))
+        position = bx + bw * position / duration
+        love.graphics.setColor(colorsByLane[note[2]])
+        love.graphics.line(position, by + 0.5, position, by + bh - 1)
+    end
 
     local scaled = math.floor(bw * progress)
+    love.graphics.setColor(200, 200, 200, 100)
     love.graphics.rectangle("fill", bx, by, scaled, bh)
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.line(bx, by, bx + scaled - 0.5, by - 0.5)
+    love.graphics.setColor(200, 200, 200)
+
+    local text = util.secondsToTime(math.floor(position)) .. "/" .. util.secondsToTime(math.ceil(duration))
+    local size = love.graphics.getFont():getWidth(text)
+    love.graphics.print(text, math.min(width - 2, math.max(2, scaled - size)), by - 18)
 
     if scaled > 2 then
-        love.graphics.setStencil(function()
-            love.graphics.rectangle("fill", bx, by, scaled, bh)
-        end)
-
-        love.graphics.setColor(40, 40, 40)
-        love.graphics.printf(util.secondsToTime(math.floor(position)), bx, by + 1, scaled - 2, "right")
-
-        love.graphics.setStencil()
+        -- love.graphics.setStencil(function()
+        --     love.graphics.rectangle("fill", bx, by, scaled, bh)
+        -- end)
+        --
+        -- love.graphics.setColor(40, 40, 40)
+        -- love.graphics.printf(util.secondsToTime(math.floor(position)), bx, by + 1, scaled - 2, "right")
+        --
+        -- love.graphics.setStencil()
     end
 end
 

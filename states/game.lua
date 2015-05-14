@@ -214,6 +214,14 @@ function state:lanePressed(lane)
     end
 
     self:loseCombo()
+
+    if lane == 1 or lane == 2 then
+        self.laneUsed[1] = false
+    elseif lane == 4 or lane == 5 then
+        self.laneUsed[3] = false
+    elseif lane == 3 then
+        self.laneUsed[2] = false
+    end
 end
 
 function state:laneReleased(lane)
