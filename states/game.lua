@@ -752,11 +752,11 @@ function state:draw()
         love.graphics.printf("REWIND", x + 120, y - 64 - 7 * 12 - 35 - 24, 64, "right")
     end
 
-    local rating = (1 - self.stats.missCount / self.stats.noteCount)
-    rating = math.floor(rating * 1000 + 0.5) / 10
-    love.graphics.setFont(self.regularFont)
-    love.graphics.setColor(200, 100, 30)
-    love.graphics.printf(rating, x + 120 - 200, y - 64 - 7 * 12 - 35 - 24 - 30, 64 + 200, "right")
+    -- local rating = (1 - self.stats.missCount / self.stats.noteCount)
+    -- rating = math.floor(rating * 1000 + 0.5) / 10
+    -- love.graphics.setFont(self.regularFont)
+    -- love.graphics.setColor(200, 100, 30)
+    -- love.graphics.printf(rating, x + 120 - 200, y - 64 - 7 * 12 - 35 - 24 - 30, 64 + 200, "right")
 
     -- Draw controls for fading and notes
     love.graphics.setLineWidth(2)
@@ -841,10 +841,23 @@ function state:draw()
 
     -- Score..
     love.graphics.setFont(self.comboFont)
-    love.graphics.setColor(0, 0, 0)
-    love.graphics.print(util.addSeparators(self.stats.score), 71, 47)
+    love.graphics.setLineWidth(2)
+    -- Draw a rectangle around the score
+    love.graphics.setColor(50, 50, 50)
+    love.graphics.rectangle("fill", 72, 72, 175, 42)
+    love.graphics.setColor(150, 150, 150)
+    love.graphics.rectangle("line", 72, 72, 175, 42)
+    -- Draw the score number
     love.graphics.setColor(255, 255, 255)
-    love.graphics.print(util.addSeparators(self.stats.score), 72, 48)
+    love.graphics.print(util.addSeparators(self.stats.score), 72 + 8, 72 + 8)
+    -- Draw a rectangle around the combo
+    love.graphics.setColor(50, 50, 50)
+    love.graphics.rectangle("fill", 72, 72 + 42 + 8, 100, 42)
+    love.graphics.setColor(150, 150, 150)
+    love.graphics.rectangle("line", 72, 72 + 42 + 8, 100, 42)
+    -- Draw the combo number
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.print(util.addSeparators(self.combo), 72 + 8, 72 + 42 + 8 + 8)
 
     -- Draw hit effects
     love.graphics.setLineWidth(4)
@@ -968,9 +981,10 @@ function state:draw()
             love.graphics.printf("Left", sdx - 32, 108, 64, "center")
 
             -- Draw the X/A/B buttons
-            button(width - 32 - 32 - 8 - 32 - 8 - 32, 48, "X", joystick:isGamepadDown("x") or joystick:isGamepadDown("y"))
-            button(width - 32 - 32 - 8 - 32, 48, "A", joystick:isGamepadDown("a"))
-            button(width - 32 - 32, 48, "B", joystick:isGamepadDown("b") or joystick:isGamepadDown("y"))
+            button(width - 32 - 32 - 8 - 32 - 8 - 32 + 8, 48, "X", joystick:isGamepadDown("x"))
+            button(width - 32 - 32 - 8 - 32, 48 + 32, "A", joystick:isGamepadDown("a"))
+            button(width - 32 - 32 - 8 - 32, 48 - 32, "Y", joystick:isGamepadDown("y"))
+            button(width - 32 - 32 - 8, 48, "B", joystick:isGamepadDown("b"))
         else
             local function button(x, y, label, state)
                 love.graphics.setFont(self.messageFont)
