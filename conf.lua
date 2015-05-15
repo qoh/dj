@@ -1,5 +1,8 @@
 function love.conf(t)
     settings = {
+        fullscreen = false,
+        vsync = true,
+        fsaa = 8,
         ignoreGamepad = false,
         showInput = false
     }
@@ -24,7 +27,14 @@ function love.conf(t)
     t.console = not love.filesystem.isFused()
 
     t.window.title = "Placeholder"
+    -- t.window.icon = ""
     t.window.width = 1280
     t.window.height = 720
-    t.window.fsaa = 8
+    t.window.resizable = true
+    t.window.minwidth = 192 + 192
+    t.window.minheight = 480
+    t.window.fullscreen = settings.fullscreen
+    t.window.fullscreentype = "desktop"
+    t.window.vsync = settings.vsync
+    t.window.fsaa = settings.fsaa
 end
