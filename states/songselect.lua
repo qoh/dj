@@ -1,6 +1,29 @@
 local util = require "lib.util"
 local state = {}
 
+-- experiment
+-- local scale = 0.5
+--
+-- function love.window.toPixels(x, y)
+--     x = x * scale
+--
+--     if y then
+--         y = y * scale
+--     end
+--
+--     return x, y
+-- end
+--
+-- function love.window.fromPixels(x, y)
+--     x = x / scale
+--
+--     if y then
+--         y = y / scale
+--     end
+--
+--     return x, y
+-- end
+
 function state:run(callback)
     local lookup = {}
 
@@ -48,10 +71,10 @@ function state:run(callback)
 end
 
 function state:init()
-    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
-    self.titleFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
-    self.detailFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 16)
-    self.smallFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
+    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", love.window.toPixels(36))
+    self.titleFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(24))
+    self.detailFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(16))
+    self.smallFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(14))
 
     self.imageNavGamepad = love.graphics.newImage("assets/keys-gamepad/dpad.png")
     self.imageSelGamepad = love.graphics.newImage("assets/keys-gamepad/a.png")
@@ -63,16 +86,25 @@ function state:enter(previous, callback, songs, loads)
     self.callback = callback
     self.songs = songs
     self.loads = loads
-    self.selected = false
-    self.difficulty = false
-    self.source = nil
-    self.images = {}
-    self.stickScrollTime = nil
 
+    self.indexSong = nil
+    self.indexVersion = nil
+
+    self.stickScrollTime = nil
+    self.timeSinceClick = nil
+    self.isMouseScroll = false
+
+    self.scrollValue = 0
+    self.scrollSpeed = 0
+
+    self.source = nil
+    self.image = nil
     self.fadingSounds = {}
     self.fadingImages = {}
 
-    self:select(1, 1)
+    if #self.songs > 0 then
+        self:select(1, 1)
+    end
 
     love.graphics.setBackgroundColor(50, 50, 50)
     love.keyboard.setKeyRepeat(true)
@@ -88,12 +120,12 @@ function state:leave()
     self.fadingSounds = nil
     self.fadingImages = {}
 
-    self.images = nil
-
     if self.source then
         self.source:stop()
-        self.source = nil
     end
+
+    self.source = nil
+    self.image = nil
 
     self.songs = nil
     self.loads = nil
@@ -101,122 +133,57 @@ function state:leave()
     collectgarbage()
 end
 
-function state:select(selectedIndex, difficultyIndex)
-    local selected = self.selected
-    local difficulty = self.difficulty
-
-    self.selected = math.max(1, math.min(#self.songs, selectedIndex))
-
-    if difficultyIndex < 1 then
-        difficultyIndex = difficultyIndex + #self.songs[self.selected]
-    elseif difficultyIndex > #self.songs[self.selected] then
-        difficultyIndex = difficultyIndex - #self.songs[self.selected]
-    end
-
-    -- self.difficulty = math.max(1, math.min(#self.songs[self.selected], diff))
-    self.difficulty = difficultyIndex
-
-    local prevName
-    local prevImageFile
-    local prevSoundFile
-
-    if selected then
-        prevName = self.songs[selected][difficulty]
-        prevImageFile = self.loads[prevName].image and (util.filepath(prevName) .. self.loads[prevName].image)
-        prevSoundFile = util.filepath(prevName) .. self.loads[prevName].audio
-    end
-
-    local currName = self.songs[self.selected][self.difficulty]
-    local currImageFile = self.loads[currName].image and (util.filepath(currName) .. self.loads[currName].image)
-    local currSoundFile = util.filepath(currName) .. self.loads[currName].audio
-
-    if prevImageFile ~= currImageFile and self.images[prevImageFile] ~= nil and self.images[prevImageFile] ~= false then
-        table.insert(self.fadingImages, {self.images[prevImageFile], 1})
-    end
-
-    if currImageFile then
-        if self.images[currImageFile] == nil then
-            self.images[currImageFile] = love.graphics.newImage(currImageFile)
-
-            if self.images[currImageFile] == nil then
-                self.images[currImageFile] = false
-            end
-        end
-    end
-
-    if prevSoundFile ~= currSoundFile then
-        if self.source then
-            table.insert(self.fadingSounds, self.source)
-            self.source = nil
-        end
-
-        self.source = love.audio.newSource(currSoundFile, "stream")
-        self.source:setLooping(true)
-        self.source:setVolume(0)
-        self.source:play()
-        self.source:seek(30.5)
-    end
-end
-
 function state:continue()
-    local name = self.songs[self.selected][self.difficulty]
+    local name = self.songs[self.indexSong][self.indexVersion]
     local load = self.loads[name]
 
     local soundData = love.sound.newSoundData(util.filepath(name) .. load.audio)
     self.callback(name, load, soundData)
 end
 
-function state:gamepadpressed(joystick, key)
-    if key == "dpdown" then
-        self:select(self.selected + 1, 1)
-    elseif key == "dpup" then
-        self:select(self.selected - 1, 1)
-    elseif key == "dpleft" then
-        self:select(self.selected, self.difficulty - 1)
-    elseif key == "dpright" then
-        self:select(self.selected, self.difficulty + 1)
-    elseif key == "a" then
-        self:continue()
-    elseif key == "b" then
-        gamestate.pop()
-    end
-end
-
-function state:keypressed(key, unicode)
-    if key == "down" then
-        self:select(self.selected + 1, 1)
-    elseif key == "up" then
-        self:select(self.selected - 1, 1)
-    elseif key == "left" then
-        self:select(self.selected, self.difficulty - 1)
-    elseif key == "right" then
-        self:select(self.selected, self.difficulty + 1)
-    elseif key == "return" then
-        self:continue()
-    elseif key == "escape" then
-        gamestate.pop()
-    end
-end
-
 function state:update(dt)
+    if self.timeSinceClick then
+        self.timeSinceClick = self.timeSinceClick + dt
+    end
+
+    self.scrollValue = self.scrollValue + self.scrollSpeed * dt
+    self.scrollSpeed = self.scrollSpeed - self.scrollSpeed * dt * 8
+
+    local height = love.window.fromPixels(love.graphics.getHeight())
+
+    -- local minimum = 68 * #self.songs - 8 - height / 8
+    -- local maximum = math.max(minimum, height / 8)
+    local minimum = 0
+    local maximum = 68 * #self.songs - 8
+
+    if self.scrollValue < minimum then
+        self.scrollValue = self.scrollValue + (minimum - self.scrollValue) * dt * 16
+    elseif self.scrollValue > maximum then
+        self.scrollValue = self.scrollValue + (maximum - self.scrollValue) * dt * 16
+
+        if self.scrollValue < maximum then
+            self.scrollValue = maximum
+        end
+    end
+
     local joystick = love.joystick.getJoysticks()[1]
 
-    if joystick then
+    if not settings.ignoreGamepad and joystick then
         local value = joystick:getGamepadAxis("lefty")
-        local speed = 1 - (math.abs(value) - 0.25) / 0.75 + 0.1
+        local speed = 1 - (math.abs(value) - 0.25) / 0.75 + 0.05
 
         if math.abs(value) > 0.25 then
             local delta = value < 0 and -1 or 1
 
             if self.stickScrollTime then
                 while self.stickScrollTime <= 0 do
-                    self:select(self.selected + delta, 1)
+                    self:select(math.max(1, math.min(#self.songs, self.indexSong + delta)), 1)
                     self.stickScrollTime = self.stickScrollTime + speed
                 end
 
                 self.stickScrollTime = self.stickScrollTime - dt
             else
-                self:select(self.selected + delta, 1)
+                self:select(math.max(1, math.min(#self.songs, self.indexSong + delta)), 1)
                 self.stickScrollTime = 0.4
             end
         else
@@ -260,41 +227,214 @@ function state:update(dt)
     end
 end
 
-function state:draw()
-    local width, height = love.graphics.getDimensions()
+function state:select(indexSong, indexVersion)
+    local prevImage, currImage
+    local prevSound, currSound
 
-    do -- Draw stuff regarding the currently selected song
-        local file = self.songs[self.selected][self.difficulty]
-        local load = self.loads[file]
+    if self.indexSong and self.songs[self.indexSong] then
+        local load = self.loads[self.songs[self.indexSong][self.indexVersion]]
+        prevImage = load.image and util.filepath(self.songs[self.indexSong][self.indexVersion]) .. load.image
+        prevSound = util.filepath(self.songs[self.indexSong][self.indexVersion]) .. load.audio
+    end
 
-        if load.image then
-            local image = self.images[util.filepath(file) .. load.image]
+    self.indexSong = indexSong
+    self.indexVersion = indexVersion
 
-            if image then
-                local w, h = image:getDimensions()
-                local scale = math.max(width / w, height / h)
+    do
+        local load = self.loads[self.songs[self.indexSong][self.indexVersion]]
+        currImage = load.image and util.filepath(self.songs[self.indexSong][self.indexVersion]) .. load.image
+        currSound = util.filepath(self.songs[self.indexSong][self.indexVersion]) .. load.audio
+    end
 
-                w = w * scale
-                h = h * scale
+    if prevImage ~= currImage then
+        if self.image ~= nil then
+            table.insert(self.fadingImages, {self.image, 1})
+        end
 
-                love.graphics.setColor(200, 200, 200)
-                love.graphics.draw(image, width / 2 - w / 2, height / 2 - h / 2, 0, scale, scale)
+        if currImage then
+            self.image = love.graphics.newImage(currImage)
+        end
+    end
+
+    if prevSound ~= currSound then
+        if self.source then
+            table.insert(self.fadingSounds, self.source)
+        end
+
+        self.source = love.audio.newSource(currSound, "stream")
+        self.source:setLooping(true)
+        self.source:setVolume(0)
+        self.source:play()
+        self.source:seek(30.5)
+    end
+
+    local target = self:getEntryY(indexSong, true) + 30
+    local distance = target - self.scrollValue
+
+    self.scrollSpeed = distance * 8
+end
+
+function state:keypressed(key, unicode)
+    if key == "down" then
+        if self.indexSong == #self.songs then
+            self:select(1, 1)
+        else
+            self:select(self.indexSong + 1, 1)
+        end
+    elseif key == "up" then
+        if self.indexSong == 1 then
+            self:select(#self.songs, 1)
+        else
+            self:select(self.indexSong - 1, 1)
+        end
+    elseif key == "left" then
+        local versions = self.songs[self.indexSong]
+
+        if self.indexVersion == 1 then
+            self:select(self.indexSong, #versions)
+        else
+            self:select(self.indexSong, self.indexVersion - 1)
+        end
+    elseif key == "right" then
+        local versions = self.songs[self.indexSong]
+
+        if self.indexVersion == #versions then
+            self:select(self.indexSong, 1)
+        else
+            self:select(self.indexSong, self.indexVersion + 1)
+        end
+    elseif key == "return" then
+        self:continue()
+    elseif key == "escape" then
+        gamestate.pop()
+    end
+end
+
+function state:gamepadpressed(joystick, key)
+    if key == "dpdown" then
+        if self.indexSong == #self.songs then
+            self:select(1, 1)
+        else
+            self:select(self.indexSong + 1, 1)
+        end
+    elseif key == "dpup" then
+        if self.indexSong == 1 then
+            self:select(#self.songs, 1)
+        else
+            self:select(self.indexSong - 1, 1)
+        end
+    elseif key == "dpleft" then
+        local versions = self.songs[self.indexSong]
+
+        if self.indexVersion == 1 then
+            self:select(self.indexSong, #versions)
+        else
+            self:select(self.indexSong, self.indexVersion - 1)
+        end
+    elseif key == "dpright" then
+        local versions = self.songs[self.indexSong]
+
+        if self.indexVersion == #versions then
+            self:select(self.indexSong, 1)
+        else
+            self:select(self.indexSong, self.indexVersion + 1)
+        end
+    elseif key == "a" then
+        self:continue()
+    elseif key == "b" then
+        gamestate.pop()
+    end
+end
+
+-- function state:touchpressed(id, x, y, pressure)
+--     if y < 1 / 3 then
+--         self:select(self.selected - 1, 1)
+--     elseif y > 2 / 3 then
+--         self:select(self.selected + 1, 1)
+--     else
+--         self:continue()
+--     end
+-- end
+
+function state:mousemoved(x, y, dx, dy)
+    if love.mouse.isDown("l") then
+        self.isMouseScroll = true
+        self.scrollSpeed = love.window.fromPixels(-dy) / love.timer.getDelta()
+    end
+end
+
+function state:mousepressed(x, y, button)
+    if button == "wd" then
+        self.scrollSpeed = self.scrollSpeed + 288 * 2
+    elseif button == "wu" then
+        self.scrollSpeed = self.scrollSpeed - 288 * 2
+    end
+
+    self.isMouseScroll = false
+end
+
+function state:mousereleased(x, y, button)
+    if button == "l" and not self.isMouseScroll then
+        local index = self:findEntryColliding(love.window.fromPixels(x, y))
+
+        if index then
+            if index == self.indexSong and self.timeSinceClick and self.timeSinceClick < 0.2 then
+                self:continue()
+            else
+                self:select(index, 1)
             end
         end
 
-        local x = 48
-        local y = 96 + (self.selected - 1) * 72
-
-        love.graphics.setColor(0, 0, 0, 100)
-        love.graphics.rectangle("fill", x, y, 650, 66)
+        self.timeSinceClick = 0
     end
 
-    -- Draw fading images
+    self.isMouseScroll = false
+end
+
+function state:findEntryColliding(x, y)
+    if x < 32 or x > 32 + 600 then
+        return
+    end
+
+    y = y - love.window.fromPixels(love.graphics.getHeight()) / 2
+    y = (y + self.scrollValue) / 68 + 1
+
+    if y < 1 or math.floor(y) > #self.songs or y - math.floor(y) > 60 / 68 then
+        return
+    end
+
+    return math.floor(y)
+end
+
+function state:getEntryY(index, excludeTranslate)
+    local y = 68 * (index - 1)
+
+    if not excludeTranslate then
+        y = y + love.window.fromPixels(love.graphics.getHeight()) / 2 - self.scrollValue
+    end
+
+    return y
+end
+
+function state:draw()
+    local width, height = love.window.fromPixels(love.graphics.getDimensions())
+
+    if self.image then
+        local w, h = love.window.fromPixels(self.image:getDimensions())
+        local scale = math.max(width / w, height / h)
+
+        w = w * scale
+        h = h * scale
+
+        love.graphics.setColor(255, 255, 255)
+        love.graphics.draw(self.image, love.window.toPixels(width / 2 - w / 2), love.window.toPixels(height / 2 - h / 2), 0, scale, scale)
+    end
+
     for i, entry in ipairs(self.fadingImages) do
         local image = entry[1]
         local opacity = entry[2]
 
-        local w, h = image:getDimensions()
+        local w, h = love.window.fromPixels(image:getDimensions())
         local scale = math.max(width / w, height / h)
 
         w = w * scale
@@ -304,78 +444,58 @@ function state:draw()
         love.graphics.draw(image, width / 2 - w / 2, height / 2 - h / 2, 0, scale, scale)
     end
 
-    for i, difficulties in ipairs(self.songs) do
-        local x = 48
-        local y = 96 + (i - 1) * 72
+    love.graphics.push()
+    love.graphics.translate(0, math.floor(love.window.toPixels(height / 2) + 0.5))
+    love.graphics.translate(0, math.floor(love.window.toPixels(-self.scrollValue) + 0.5))
 
-        local load = self.loads[difficulties[self.selected == i and self.difficulty or 1]]
-        local shown
+    love.graphics.setLineWidth(love.window.toPixels(2))
 
-        if load.title then
-            shown = load.title .. " - " .. (load.author or "Unknown artist")
-        else
-            shown = love.path.leaf(file[1])
+    for i, song in ipairs(self.songs) do
+        -- Each entry in the list of songs is a box containing (vertically):
+        -- -- 8dp padding
+        -- -- 24dp title
+        -- -- 4dp padding
+        -- -- 16dp detail
+        -- -- 8dp padding
+        -- Entries are 60dp tall and have 8dp padding on the bottom
+        -- This makes them exactly 68dp tall
+        local x = 32
+        local y = self:getEntryY(i, true)
 
-            if load.author then
-                shown = shown .. " - " .. load.author
+        love.graphics.setColor(63, 63, 63, i == self.indexSong and 224 or  63)
+        love.graphics.rectangle("fill", love.window.toPixels(x), love.window.toPixels(y), love.window.toPixels(600, 60))
+        love.graphics.setColor(63, 63, 63, i == self.indexSong and 255 or 127)
+        love.graphics.rectangle("line", love.window.toPixels(x), love.window.toPixels(y), love.window.toPixels(600, 60))
+
+        local title
+        local detail
+
+        if i == self.indexSong then
+            local load = self.loads[song[self.indexVersion]]
+            title = load.title .. " - " .. load.author
+
+            if load.difficulty then
+                title = title .. " (" .. load.difficulty .. ")"
             end
+        else
+            local load = self.loads[song[1]]
+            title = load.title .. " - " .. load.author
         end
 
-        if i == self.selected and load.difficulty then
-            shown = shown .. " (" .. load.difficulty .. ")"
-        end
+        detail = util.secondsToTime(math.ceil(self.loads[song[1]].length))
 
-        love.graphics.setFont(self.titleFont)
         love.graphics.setColor(255, 255, 255)
-        love.graphics.print(shown, x + 8, y + 8)
-
-        local detail = util.secondsToTime(math.ceil(load.length))
-        --     .. "     " .. load.bpm .. " BPM"
-
-        if i == self.selected then
-            detail = detail
-                .. "     " .. #load.notes .. " notes"
-                .. "     " .. #load.lanes .. " fades"
-        else
-            if #difficulties ~= 1 then
-                detail = detail .. "     " .. #difficulties .. " difficulties"
-            end
-        end
-
+        love.graphics.setFont(self.titleFont)
+        love.graphics.print(title, love.window.toPixels(x + 8, y + 8))
         love.graphics.setFont(self.detailFont)
-        love.graphics.setColor(255, 255, 255, 200)
-        love.graphics.print(detail, x + 8, y + 38)
+        love.graphics.print(detail, love.window.toPixels(x + 8, y + 36))
     end
 
-    love.graphics.setFont(self.headerFont)
-    love.graphics.setColor(255, 255, 255)
-    love.graphics.print("Select a track", 32, 32)
+    love.graphics.pop()
 
-    -- Controls
-    local hw = 216 + 94
-    local hh = 32
-    local hx = width - 8 - hw
-    local hy = height - 8 - hh
-
-    love.graphics.setColor(0, 0, 0, 127)
-    love.graphics.rectangle("fill", hx - 8, hy - 8, hw + 16, hh + 16)
-    love.graphics.setColor(255, 255, 255)
-    love.graphics.setFont(self.smallFont)
-
-    local joystick = #love.joystick.getJoysticks() > 0
-
-    if settings.ignoreGamepad then
-        joystick = nil
-    end
-
-    local imageNav = joystick and self.imageNavGamepad or self.imageNavKeyboard
-    local imageSel = joystick and self.imageSelGamepad or self.imageSelKeyboard
-
-    love.graphics.draw(imageNav, hx, hy)
-    -- love.graphics.print("Navigate", hx + 36, hy + 8)
-    love.graphics.print("Change Song/Difficulty", hx + 36, hy + 8)
-    love.graphics.draw(imageSel, hx + 36 + 72 + 94, hy)
-    love.graphics.print("Confirm", hx + 36 + 72 + 36 + 94, hy + 8)
+    -- love.graphics.setFont(self.headerFont)
+    -- love.graphics.setColor(255, 255, 255)
+    -- love.graphics.print("Select a track", love.window.toPixels(32, 32))
 end
 
 return state

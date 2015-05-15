@@ -1,8 +1,10 @@
 local state = {}
 
 function state:init()
-    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
-    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+    local scale = love.window.getPixelScale()
+
+    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36 * scale)
+    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24 * scale)
 
     local mods = {speed = 1}
 
@@ -79,6 +81,16 @@ function state:keypressed(key, unicode)
     end
 end
 
+function state:touchpressed(id, x, y, pressure)
+    if y < 1 / 3 then
+        self:prev()
+    elseif y > 2 / 3 then
+        self:next()
+    else
+        self:activate()
+    end
+end
+
 local function round_worm_dir(dx, dy)
     local length = math.sqrt(dx^2 + dy^2)
     local theta = math.atan2(dy / length, dx / length)
@@ -100,6 +112,7 @@ end
 
 function state:update(dt)
     local w, h = love.graphics.getDimensions()
+    local scale = love.window.getPixelScale()
 
     local colors = {
         {127, 255,  50},
@@ -163,8 +176,8 @@ function state:update(dt)
                 worm.dy = dy
             end
 
-            x = x + dx * dt * 100
-            y = y + dy * dt * 100
+            x = x + dx * dt * 100 * scale
+            y = y + dy * dt * 100 * scale
 
             worm.path[#worm.path - 1] = x
             worm.path[#worm.path    ] = y
@@ -189,12 +202,15 @@ end
 
 function state:draw()
     local width, height = love.graphics.getDimensions()
+    local scale = love.window.getPixelScale()
+    width = width / scale
+    height = height / scale
 
     local time = love.timer.getTime()
     local strength = 1 - (time - math.floor(time))
     strength = strength ^ 3
 
-    love.graphics.setLineWidth(2 + 2 * strength)
+    love.graphics.setLineWidth((2 + 2 * strength) * scale)
 
     for i, entry in ipairs(self.waste) do
         love.graphics.setColor(entry.color[1], entry.color[2], entry.color[3], entry.life * 255)
@@ -206,21 +222,16 @@ function state:draw()
         love.graphics.line(entry.path)
     end
 
-    -- love.graphics.setColor(0, 0, 0, 50)
-    -- love.graphics.rectangle("fill", 0, 0, width, height)
-
-    --
-
     love.graphics.push()
-    love.graphics.translate(width / 2, height / 2)
+    love.graphics.translate(width / 2 * scale, height / 2 * scale)
 
     love.graphics.setColor(200, 200, 200)
     love.graphics.setFont(self.headerFont)
-    love.graphics.printf(love.window.getTitle(), -200, -150, 400, "center")
+    love.graphics.printf(love.window.getTitle(), -200 * scale, -150 * scale, 400 * scale, "center")
 
     love.graphics.setFont(self.itemFont)
     love.graphics.setColor(200, 200, 200)
-    love.graphics.rectangle("fill", -200, -60 + (self.selection - 1) * 36, 400, 32)
+    love.graphics.rectangle("fill", -200 * scale, (-60 + (self.selection - 1) * 36) * scale, 400 * scale, 32 * scale)
 
     for i, item in ipairs(self.items) do
         if i == self.selection then
@@ -229,7 +240,7 @@ function state:draw()
             love.graphics.setColor(200, 200, 200)
         end
 
-        love.graphics.print(item[1], -200 + 4, -60 + (i - 1) * 36 + 2)
+        love.graphics.print(item[1], (-200 + 4) * scale, (-60 + (i - 1) * 36 + 2) * scale)
     end
 
     love.graphics.pop()

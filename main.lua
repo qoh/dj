@@ -30,3 +30,7 @@ function love.load()
     gamestate.registerEvents()
     gamestate.switch(states.menu)
 end
+
+-- function love.touchpressed(id,x,y,p)
+--     gamestate.switch(states.settings)
+-- end

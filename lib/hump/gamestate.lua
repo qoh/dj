@@ -73,18 +73,17 @@ local all_callbacks = {
 	'mousepressed', 'mousereleased', 'mousemoved', 'quit', 'resize', 'textinput',
 	'threaderror', 'update', 'visible', 'gamepadaxis', 'gamepadpressed',
 	'gamepadreleased', 'joystickadded', 'joystickaxis', 'joystickhat',
-	'joystickpressed', 'joystickreleased', 'joystickremoved'
+	'joystickpressed', 'joystickreleased', 'joystickremoved',
+
+	-- love-android-sdl-2
+	'touchpressed', 'touchreleased', 'touchmoved'
 }
 
 function GS.registerEvents(callbacks)
 	local registry = {}
 	callbacks = callbacks or all_callbacks
 	for _, f in ipairs(callbacks) do
-		if enable_cupid then
-			registry[f] = love.get_original_impl(f) or __NULL__
-		else
-			registry[f] = love[f] or __NULL__
-		end
+		registry[f] = love[f] or __NULL__
 		love[f] = function(...)
 			registry[f](...)
 			return GS[f](...)
@@ -95,6 +94,9 @@ end
 -- forward any undefined functions
 setmetatable(GS, {__index = function(_, func)
 	return function(...)
+		-- if func == "touchpressed" then
+		-- 	gamestate.switch(states.delaytest)
+		-- end
 		return (stack[#stack][func] or __NULL__)(stack[#stack], ...)
 	end
 end})

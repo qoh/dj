@@ -6,6 +6,33 @@ function state:init()
     self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
     self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+
+    self.bloomCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight(), "normal", 8)
+    self.bloomShader = love.graphics.newShader[[
+       //BlackBulletIV
+       extern vec2 size = vec2(140,140); // 20,20
+       extern int samples = 4; // pixels per axis; higher = bigger glow, worse performance // 2
+       extern float quality = .125; // lower = smaller glow, better quality // .5
+
+       vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc)
+       {
+          vec4 src = Texel(tex, tc);
+          vec4 sum = vec4(0);
+          int diff = (samples - 1) / 2;
+          vec2 sizeFactor = vec2(1) / size * quality;
+
+          for (int x = -diff; x <= diff; x++)
+          {
+             for (int y = -diff; y <= diff; y++)
+             {
+                vec2 offset = vec2(x, y) * sizeFactor;
+                sum += Texel(tex, tc + offset);
+             }
+          }
+
+       return ((sum / (samples * samples)) + src) * color;
+       }
+    ]]
 end
 
 function state:enter(previous, filename, song, data, mods, startFromEditor)
@@ -25,6 +52,7 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
     }
 
     self.startTimer = 3
+    self.startStart = false
     self.fade = 0
     self.combo = 0
     self.rewind = false
@@ -505,12 +533,17 @@ function state:update(dt)
     local spinning = false
 
     if self.startTimer > 0 then
-        self.startTimer = self.startTimer - dt
+        if self.startStart then
+            self.startTimer = self.startTimer - dt
 
-        if self.startTimer <= 0 then
-            self.audioSource:play()
-            self.startTimer = 0
+            if self.startTimer <= 0 then
+                self.audioSource:play()
+                self.startTimer = 0
+            else
+                started = false
+            end
         else
+            self.startStart = true
             started = false
         end
     end
@@ -785,6 +818,8 @@ function state:draw()
 
     love.graphics.pop()
 
+    self.bloomCanvas:clear()
+    love.graphics.setCanvas(self.bloomCanvas)
     -- Draw combo steps
     for i=1, 7 do
         if self.combo >= 24 or self.combo % 8 >= i then
@@ -801,19 +836,25 @@ function state:draw()
     if self.combo >= 8 then
         local mult = math.min(4, 1 + math.floor(self.combo / 8))
         love.graphics.setFont(self.comboFont)
-        love.graphics.setColor(60, 60, 60)
-        love.graphics.printf("x" .. mult, x + 119, y - 64 - 7 * 12 - 36, 64, "right")
+        -- love.graphics.setColor(60, 60, 60)
+        -- love.graphics.printf("x" .. mult, x + 119, y - 64 - 7 * 12 - 36, 64, "right")
         love.graphics.setColor(200, 100, 30)
         love.graphics.printf("x" .. mult, x + 120, y - 64 - 7 * 12 - 35, 64, "right")
     end
 
     if self.rewind then
         love.graphics.setFont(self.regularFont)
-        love.graphics.setColor(60, 60, 60)
-        love.graphics.printf("REWIND", x + 119, y - 64 - 7 * 12 - 36 - 24, 64, "right")
+        -- love.graphics.setColor(60, 60, 60)
+        -- love.graphics.printf("REWIND", x + 119, y - 64 - 7 * 12 - 36 - 24, 64, "right")
         love.graphics.setColor(200, 100, 30)
         love.graphics.printf("REWIND", x + 120, y - 64 - 7 * 12 - 35 - 24, 64, "right")
     end
+
+    love.graphics.setCanvas()
+    love.graphics.setShader(self.bloomShader)
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.draw(self.bloomCanvas)
+    love.graphics.setShader()
 
     -- local rating = (1 - self.stats.missCount / self.stats.noteCount)
     -- rating = math.floor(rating * 1000 + self:getWindow()) / 10
@@ -1195,6 +1236,8 @@ function state:draw()
 
     -- love.graphics.setColor(255, 255, 255)
     -- love.graphics.print(love.timer.getFPS(), 2, 2)
+
+    love.graphics.setShader()
 end
 
 return state
