@@ -21,7 +21,7 @@ function love.conf(t)
         patch(user, settings)
     end
 
-    t.console = true
+    t.console = not love.filesystem.isFused()
 
     t.window.title = "Placeholder"
     -- t.window.height = 900

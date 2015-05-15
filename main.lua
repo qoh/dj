@@ -1,7 +1,10 @@
--- if love.filesystem.isFused() then
-if true then
+if love.filesystem.isFused() then
     local dir = love.filesystem.getSourceBaseDirectory()
     local success = love.filesystem.mount(dir, "")
+
+    if not success then
+        print("Failed to mount source base directory in fused mode")
+    end
 end
 
 gamestate = require "lib.hump.gamestate"
@@ -19,17 +22,11 @@ states = {
 }
 
 function love.load()
-    love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
+    if love.filesystem.isFile("assets/gamecontrollerdb.txt") then
+        love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
+        print("Loaded assets/gamecontrollerdb.txt mappings")
+    end
 
     gamestate.registerEvents()
     gamestate.switch(states.menu)
-    -- gamestate.switch(states.win, {
-    --         score = 1234567,
-    --         totalOffset = 123.456,
-    --         noteCount = 123,
-    --         hitCount = 120,
-    --         missCount = 3,
-    --         bestCombo = 130,
-    --         lostCombo = 5
-    --     })
 end

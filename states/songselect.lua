@@ -2,6 +2,8 @@ local util = require "lib.util"
 local state = {}
 
 function state:run(callback)
+    local lookup = {}
+
     local songs = {}
     local loads = {}
 
@@ -18,7 +20,15 @@ function state:run(callback)
 
                 if load ~= nil then
                     loads[path] = load()
-                    table.insert(songs, path)
+                    local audio = util.filepath(path) .. loads[path].audio
+
+                    if not lookup[audio] then
+                        lookup[audio] = {}
+                        table.insert(songs, lookup[audio])
+                    end
+
+                    table.insert(lookup[audio], path)
+                    -- table.insert(songs, path)
                 end
             end
         end
@@ -27,8 +37,10 @@ function state:run(callback)
     explore("songs")
 
     table.sort(songs, function(a, b)
-        local i = loads[a].title .. " - " .. loads[a].author
-        local j = loads[b].title .. " - " .. loads[b].author
+        -- local i = loads[a].title .. " - " .. loads[a].author
+        -- local j = loads[b].title .. " - " .. loads[b].author
+        local i = loads[a[1]].title .. " - " .. loads[a[1]].author
+        local j = loads[b[1]].title .. " - " .. loads[b[1]].author
         return i < j
     end)
 
@@ -52,15 +64,15 @@ function state:enter(previous, callback, songs, loads)
     self.songs = songs
     self.loads = loads
     self.selected = false
+    self.difficulty = false
     self.source = nil
+    self.images = {}
     self.stickScrollTime = nil
 
     self.fadingSounds = {}
     self.fadingImages = {}
 
-    self.images = {}
-
-    self:select(1)
+    self:select(1, 1)
 
     love.graphics.setBackgroundColor(50, 50, 50)
     love.keyboard.setKeyRepeat(true)
@@ -89,21 +101,32 @@ function state:leave()
     collectgarbage()
 end
 
-function state:select(index)
+function state:select(selectedIndex, difficultyIndex)
     local selected = self.selected
-    self.selected = math.max(1, math.min(#self.songs, index))
+    local difficulty = self.difficulty
+
+    self.selected = math.max(1, math.min(#self.songs, selectedIndex))
+
+    if difficultyIndex < 1 then
+        difficultyIndex = difficultyIndex + #self.songs[self.selected]
+    elseif difficultyIndex > #self.songs[self.selected] then
+        difficultyIndex = difficultyIndex - #self.songs[self.selected]
+    end
+
+    -- self.difficulty = math.max(1, math.min(#self.songs[self.selected], diff))
+    self.difficulty = difficultyIndex
 
     local prevName
     local prevImageFile
     local prevSoundFile
 
     if selected then
-        prevName = self.songs[selected]
+        prevName = self.songs[selected][difficulty]
         prevImageFile = self.loads[prevName].image and (util.filepath(prevName) .. self.loads[prevName].image)
         prevSoundFile = util.filepath(prevName) .. self.loads[prevName].audio
     end
 
-    local currName = self.songs[self.selected]
+    local currName = self.songs[self.selected][self.difficulty]
     local currImageFile = self.loads[currName].image and (util.filepath(currName) .. self.loads[currName].image)
     local currSoundFile = util.filepath(currName) .. self.loads[currName].audio
 
@@ -136,7 +159,7 @@ function state:select(index)
 end
 
 function state:continue()
-    local name = self.songs[self.selected]
+    local name = self.songs[self.selected][self.difficulty]
     local load = self.loads[name]
 
     local soundData = love.sound.newSoundData(util.filepath(name) .. load.audio)
@@ -145,9 +168,13 @@ end
 
 function state:gamepadpressed(joystick, key)
     if key == "dpdown" then
-        self:select(self.selected + 1)
+        self:select(self.selected + 1, 1)
     elseif key == "dpup" then
-        self:select(self.selected - 1)
+        self:select(self.selected - 1, 1)
+    elseif key == "dpleft" then
+        self:select(self.selected, self.difficulty - 1)
+    elseif key == "dpright" then
+        self:select(self.selected, self.difficulty + 1)
     elseif key == "a" then
         self:continue()
     elseif key == "b" then
@@ -157,9 +184,13 @@ end
 
 function state:keypressed(key, unicode)
     if key == "down" then
-        self:select(self.selected + 1)
+        self:select(self.selected + 1, 1)
     elseif key == "up" then
-        self:select(self.selected - 1)
+        self:select(self.selected - 1, 1)
+    elseif key == "left" then
+        self:select(self.selected, self.difficulty - 1)
+    elseif key == "right" then
+        self:select(self.selected, self.difficulty + 1)
     elseif key == "return" then
         self:continue()
     elseif key == "escape" then
@@ -179,13 +210,13 @@ function state:update(dt)
 
             if self.stickScrollTime then
                 while self.stickScrollTime <= 0 do
-                    self:select(self.selected + delta)
+                    self:select(self.selected + delta, 1)
                     self.stickScrollTime = self.stickScrollTime + speed
                 end
 
                 self.stickScrollTime = self.stickScrollTime - dt
             else
-                self:select(self.selected + delta)
+                self:select(self.selected + delta, 1)
                 self.stickScrollTime = 0.4
             end
         else
@@ -233,7 +264,7 @@ function state:draw()
     local width, height = love.graphics.getDimensions()
 
     do -- Draw stuff regarding the currently selected song
-        local file = self.songs[self.selected]
+        local file = self.songs[self.selected][self.difficulty]
         local load = self.loads[file]
 
         if load.image then
@@ -273,24 +304,24 @@ function state:draw()
         love.graphics.draw(image, width / 2 - w / 2, height / 2 - h / 2, 0, scale, scale)
     end
 
-    for i, file in ipairs(self.songs) do
+    for i, difficulties in ipairs(self.songs) do
         local x = 48
         local y = 96 + (i - 1) * 72
 
-        local load = self.loads[file]
+        local load = self.loads[difficulties[self.selected == i and self.difficulty or 1]]
         local shown
 
         if load.title then
             shown = load.title .. " - " .. (load.author or "Unknown artist")
         else
-            shown = love.path.leaf(file)
+            shown = love.path.leaf(file[1])
 
             if load.author then
                 shown = shown .. " - " .. load.author
             end
         end
 
-        if load.difficulty then
+        if i == self.selected and load.difficulty then
             shown = shown .. " (" .. load.difficulty .. ")"
         end
 
@@ -314,7 +345,7 @@ function state:draw()
     love.graphics.print("Select a track", 32, 32)
 
     -- Controls
-    local hw = 216
+    local hw = 216 + 94
     local hh = 32
     local hx = width - 8 - hw
     local hy = height - 8 - hh
@@ -334,9 +365,10 @@ function state:draw()
     local imageSel = joystick and self.imageSelGamepad or self.imageSelKeyboard
 
     love.graphics.draw(imageNav, hx, hy)
-    love.graphics.print("Navigate", hx + 36, hy + 8)
-    love.graphics.draw(imageSel, hx + 36 + 72, hy)
-    love.graphics.print("Confirm", hx + 36 + 72 + 36, hy + 8)
+    -- love.graphics.print("Navigate", hx + 36, hy + 8)
+    love.graphics.print("Change Song/Difficulty", hx + 36, hy + 8)
+    love.graphics.draw(imageSel, hx + 36 + 72 + 94, hy)
+    love.graphics.print("Confirm", hx + 36 + 72 + 36 + 94, hy + 8)
 end
 
 return state

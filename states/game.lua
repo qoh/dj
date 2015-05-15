@@ -106,6 +106,10 @@ function state:getCurrentPosition()
     return time / (1 / (self.song.bpm / 60))
 end
 
+function state:getWindow()
+    return self.song.window or 0.25
+end
+
 function state:getMultiplier()
     return math.min(4, 1 + math.floor(self.combo / 8))
 end
@@ -191,14 +195,32 @@ function state:setFade(offset)
     for i, fade in ipairs(self.song.lanes) do
         local offset = fade[1] - position
 
-        if offset > 0.5 then
+        if offset > self:getWindow() then
             break
         end
 
-        if offset > -0.5 and fade[2] == self.fade and not self.fadeUsed[fade] then
+        if offset > -self:getWindow() and fade[2] == self.fade and not self.fadeUsed[fade] then
             self.fadeUsed[fade] = true
             self:fadeHit(fade, offset)
             return
+        end
+    end
+
+    local noteAccessible = {
+        offset == -1,
+        offset ~= -1,
+        true,
+        offset ~= 1,
+        offset == 1
+    }
+
+    local i = 1
+
+    while i <= #self.heldNotes do
+        if not noteAccessible[self.heldNotes[i][1][2]] then
+            table.remove(self.heldNotes, i)
+        else
+            i = i + 1
         end
     end
 end
@@ -209,7 +231,7 @@ function state:lanePressed(lane)
     for i, note in ipairs(self.song.notes) do
         local offset = note[1] - position
 
-        if offset > 0.5 then
+        if offset > self:getWindow() then
             break
         end
 
@@ -638,8 +660,8 @@ function state:update(dt)
             item[2] = item[2] + dt
             item[3] = item[3] + dt
 
-            if self.shakeHit < 0.3 then
-                self.shakeHit = 0.3
+            if self.shakeHit < 0.2 then
+                self.shakeHit = 0.2
             end
 
             while item[3] >= 0.1 do
@@ -656,7 +678,7 @@ function state:update(dt)
         for i, note in ipairs(self.song.notes) do
             local offset = note[1] - position
 
-            if offset >= -0.5 then
+            if offset >= -self:getWindow() then
                 break
             end
 
@@ -795,7 +817,7 @@ function state:draw()
     end
 
     -- local rating = (1 - self.stats.missCount / self.stats.noteCount)
-    -- rating = math.floor(rating * 1000 + 0.5) / 10
+    -- rating = math.floor(rating * 1000 + self:getWindow()) / 10
     -- love.graphics.setFont(self.regularFont)
     -- love.graphics.setColor(200, 100, 30)
     -- love.graphics.printf(rating, x + 120 - 200, y - 64 - 7 * 12 - 35 - 24 - 30, 64 + 200, "right")

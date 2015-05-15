@@ -36,7 +36,6 @@ function state:draw()
         "On a gamepad, push the left stick towards the left or right in order to crossfade the track left or right, respectively.\n" ..
         "On a keyboard, hold Z to crossfade left or hold X to crossfade right (holding both is the same as holding neither).\n" ..
         "\n" ..
-        "Held notes do not actually need to be held yet.\n" ..
         "On a gamepad, you can press Y to hit the left and right lane simultaneously.\n" ..
         "\n\n\n" ..
         "Press Escape or B here and in the Settings to go back to the menu.",

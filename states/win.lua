@@ -11,6 +11,7 @@ function state:enter(previous, filename, song, stats)
     local image = song.statsImage or song.image
     self.image = image and love.graphics.newImage(util.filepath(filename) .. image)
 
+    self.song = song
     self.stats = stats
     self.flash = 1
 
@@ -70,7 +71,7 @@ function state:draw()
         "Combo drops: " .. self.stats.lostCombo .. "\n" ..
         "Notes hit: " .. self.stats.hitCount .. "\n" ..
         "Notes missed: " .. self.stats.missCount .. "\n" ..
-        "Precision: " .. math.floor((1 - math.abs(self.stats.totalOffset / self.stats.hitCount) / 0.5) * 100 + 0.5) .. "%",
+        "Timing: " .. math.floor((1 - math.abs(self.stats.totalOffset / self.stats.hitCount) / (self.song.window or 0.25)) * 100 + 0.5) .. "%",
         50 + 50, 50 + 72 + 50, width - 200)
 
     if self.flash < 0.5 then

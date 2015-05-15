@@ -1,9 +1,9 @@
 rmdir /s /q build
 mkdir build
-mkdir build\generic
-copy dj.zip build\generic\dj.love
-xcopy assets build\generic\assets /e /i
-xcopy songs build\generic\songs /e /i
+rem mkdir build\generic
+rem copy dj.zip build\generic\dj.love
+rem xcopy assets build\generic\assets /e /i
+rem xcopy songs build\generic\songs /e /i
 mkdir build\windows
 copy /b "C:\Program Files\LOVE\LOVE.exe"+dj.zip dj.exe
 move dj.exe build\windows
