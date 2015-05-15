@@ -107,7 +107,7 @@ function state:getCurrentPosition()
 end
 
 function state:getWindow()
-    return self.song.window or 0.25
+    return self.song.window or 0.5
 end
 
 function state:getMultiplier()

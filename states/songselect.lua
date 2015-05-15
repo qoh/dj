@@ -329,11 +329,18 @@ function state:draw()
         love.graphics.setColor(255, 255, 255)
         love.graphics.print(shown, x + 8, y + 8)
 
-        local detail =
-            util.secondsToTime(math.ceil(load.length))
-            .. "     " .. load.bpm .. " BPM"
-            .. "     " .. #load.notes .. " notes"
-            .. "     " .. #load.lanes .. " fades"
+        local detail = util.secondsToTime(math.ceil(load.length))
+        --     .. "     " .. load.bpm .. " BPM"
+
+        if i == self.selected then
+            detail = detail
+                .. "     " .. #load.notes .. " notes"
+                .. "     " .. #load.lanes .. " fades"
+        else
+            if #difficulties ~= 1 then
+                detail = detail .. "     " .. #difficulties .. " difficulties"
+            end
+        end
 
         love.graphics.setFont(self.detailFont)
         love.graphics.setColor(255, 255, 255, 200)
