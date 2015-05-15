@@ -4,7 +4,7 @@ function state:init()
     self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
     self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 
-    local mods = {}
+    local mods = {speed = 1}
 
     self.items = {
         {"Play", function()

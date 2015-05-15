@@ -24,7 +24,6 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
         lostCombo = 0
     }
 
-    self.modifier = 1
     self.startTimer = 3
     self.fade = 0
     self.combo = 0
@@ -56,7 +55,7 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
 
     self.audioData = data
     self.audioSource = love.audio.newSource(self.audioData)
-    self.audioSource:setPitch(self.modifier)
+    self.audioSource:setPitch(self.mods.speed or 1)
     self.audioSource:play()
 
     if startFromEditor then
@@ -413,7 +412,7 @@ function state:update(dt)
         return
     end
 
-    dt = dt * self.modifier
+    dt = dt * (self.mods.speed or 1)
 
     for i=1, 3 do
         if self.laneUsed[i] then
@@ -461,7 +460,7 @@ function state:update(dt)
                 self.faderErrorAccum = math.max(0, self.faderErrorAccum - dt)
             else
                 self.faderErrorAccum = self.faderErrorAccum + dt
-                local threshold = 1 / (self.song.bpm / 60) / self.modifier
+                local threshold = 1 / (self.song.bpm / 60) / (self.mods.speed or 1)
 
                 if self.faderErrorAccum > threshold then
                     self.faderErrorAccum = 0
@@ -495,11 +494,11 @@ function state:update(dt)
     end
 
     if self.shakeHit > 0 then
-        self.shakeHit = math.max(self.shakeHit - dt, 0)
+        self.shakeHit = math.max(self.shakeHit - dt / (self.mods.speed or 1), 0)
     end
 
     if self.shakeMiss > 0 then
-        self.shakeMiss = math.max(self.shakeMiss - dt / 2, 0)
+        self.shakeMiss = math.max(self.shakeMiss - dt / (self.mods.speed or 1) / 2, 0)
     end
 
     local started = true
@@ -934,6 +933,10 @@ function state:draw()
     for i, note in ipairs(self.song.notes) do
         local offset = note[1] - position
 
+        if y - offset * self:getBeatScale() < -16 then
+            break
+        end
+
         if note[3] then
             local last = offset + note[3]
 
@@ -1189,6 +1192,9 @@ function state:draw()
             love.graphics.printf("Numpad", width - 32 - 32 - 8 - 32 - 8 - 32, 72, 114, "center")
         end
     end
+
+    -- love.graphics.setColor(255, 255, 255)
+    -- love.graphics.print(love.timer.getFPS(), 2, 2)
 end
 
 return state

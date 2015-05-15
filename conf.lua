@@ -24,7 +24,6 @@ function love.conf(t)
     t.console = not love.filesystem.isFused()
 
     t.window.title = "Placeholder"
-    -- t.window.height = 900
     t.window.width = 1280
     t.window.height = 720
     t.window.fsaa = 8
