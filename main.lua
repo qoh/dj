@@ -15,6 +15,7 @@ states = {
     help = require "states.help",
     delaytest = require "states.delaytest",
     songselect = require "states.songselect",
+    loadsong = require "states.loadsong",
     pause = require "states.pause",
     game = require "states.game",
     win = require "states.win",

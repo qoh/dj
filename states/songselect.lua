@@ -2,7 +2,7 @@ local util = require "lib.util"
 local state = {}
 
 -- experiment
--- local scale = 0.5
+-- local scale = 2.5
 --
 -- function love.window.toPixels(x, y)
 --     x = x * scale
@@ -76,10 +76,10 @@ function state:init()
     self.detailFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(16))
     self.smallFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(14))
 
-    self.imageNavGamepad = love.graphics.newImage("assets/keys-gamepad/dpad.png")
-    self.imageSelGamepad = love.graphics.newImage("assets/keys-gamepad/a.png")
-    self.imageNavKeyboard = love.graphics.newImage("assets/keys-keyboard/arrows.png")
-    self.imageSelKeyboard = love.graphics.newImage("assets/keys-keyboard/enter.png")
+    -- self.imageNavGamepad = love.graphics.newImage("assets/keys-gamepad/dpad.png")
+    -- self.imageSelGamepad = love.graphics.newImage("assets/keys-gamepad/a.png")
+    -- self.imageNavKeyboard = love.graphics.newImage("assets/keys-keyboard/arrows.png")
+    -- self.imageSelKeyboard = love.graphics.newImage("assets/keys-keyboard/enter.png")
 end
 
 function state:enter(previous, callback, songs, loads)
@@ -103,7 +103,7 @@ function state:enter(previous, callback, songs, loads)
     self.fadingImages = {}
 
     if #self.songs > 0 then
-        self:select(1, 1)
+        self:select(love.math.random(1, #self.songs), 1)
     end
 
     love.graphics.setBackgroundColor(50, 50, 50)
@@ -137,8 +137,12 @@ function state:continue()
     local name = self.songs[self.indexSong][self.indexVersion]
     local load = self.loads[name]
 
-    local soundData = love.sound.newSoundData(util.filepath(name) .. load.audio)
-    self.callback(name, load, soundData)
+    gamestate.push(states.loadsong,
+        util.filepath(name) .. load.audio,
+        function(soundData)
+            self.callback(name, load, soundData)
+        end
+    )
 end
 
 function state:update(dt)
@@ -477,12 +481,24 @@ function state:draw()
             if load.difficulty then
                 title = title .. " (" .. load.difficulty .. ")"
             end
+
+            detail =
+                util.secondsToTime(math.ceil(load.length))
+                .. "     " .. #load.notes .. " notes"
+                .. "     " .. #load.lanes .. " fades"
+
+            if load.wip then
+                detail = detail .. "     Track not complete"
+            end
         else
             local load = self.loads[song[1]]
             title = load.title .. " - " .. load.author
-        end
+            detail = util.secondsToTime(math.ceil(load.length))
 
-        detail = util.secondsToTime(math.ceil(self.loads[song[1]].length))
+            if #song > 1 then
+                detail = detail .. "     " .. #song .. " difficulties"
+            end
+        end
 
         love.graphics.setColor(255, 255, 255)
         love.graphics.setFont(self.titleFont)
@@ -493,9 +509,17 @@ function state:draw()
 
     love.graphics.pop()
 
-    -- love.graphics.setFont(self.headerFont)
-    -- love.graphics.setColor(255, 255, 255)
-    -- love.graphics.print("Select a track", love.window.toPixels(32, 32))
+    love.graphics.setFont(self.headerFont)
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.printf("Select a track", love.window.toPixels(32), love.window.toPixels(32), love.window.toPixels(width - 64), "right")
+
+    love.graphics.setFont(self.smallFont)
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.printf("Left/Right to change difficulty",
+        love.window.toPixels(32),
+        love.window.toPixels(height - 12 - 32),
+        love.window.toPixels(width - 64),
+        "right")
 end
 
 return state

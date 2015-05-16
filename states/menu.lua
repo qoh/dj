@@ -3,8 +3,8 @@ local state = {}
 function state:init()
     local scale = love.window.getPixelScale()
 
-    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36 * scale)
-    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24 * scale)
+    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", love.window.toPixels(36))
+    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(24))
 
     local mods = {speed = 1}
 
@@ -81,13 +81,44 @@ function state:keypressed(key, unicode)
     end
 end
 
-function state:touchpressed(id, x, y, pressure)
-    if y < 1 / 3 then
-        self:prev()
-    elseif y > 2 / 3 then
-        self:next()
-    else
-        self:activate()
+-- function state:touchpressed(id, x, y, pressure)
+--     if y < 1 / 3 then
+--         self:prev()
+--     elseif y > 2 / 3 then
+--         self:next()
+--     else
+--         self:activate()
+--     end
+-- end
+
+function state:selectFromMouse(x, y)
+    x = x - love.window.fromPixels(love.graphics.getWidth() / 2)
+    y = y - love.window.fromPixels(love.graphics.getHeight() / 2)
+
+    if x < -200 or x > 200 or y < -60 then
+        return false
+    end
+
+    local f = (y + 60) / 36 + 1
+    local i = math.floor(f)
+
+    if i < 1 or i > #self.items or f - i > 32 / 36 then
+        return false
+    end
+
+    self.selection = math.floor(i)
+    return true
+end
+
+function state:mousemoved(x, y, dx, dy)
+    self:selectFromMouse(love.window.fromPixels(x, y))
+end
+
+function state:mousepressed(x, y, button)
+    if button == "l" then
+        if self:selectFromMouse(love.window.fromPixels(x, y)) then
+            self:activate()
+        end
     end
 end
 
@@ -201,7 +232,7 @@ function state:update(dt)
 end
 
 function state:draw()
-    local width, height = love.graphics.getDimensions()
+    local width, height = love.window.fromPixels(love.graphics.getDimensions())
     local scale = love.window.getPixelScale()
     width = width / scale
     height = height / scale
@@ -210,7 +241,7 @@ function state:draw()
     local strength = 1 - (time - math.floor(time))
     strength = strength ^ 3
 
-    love.graphics.setLineWidth((2 + 2 * strength) * scale)
+    love.graphics.setLineWidth(love.window.toPixels(2 + 2 * strength))
 
     for i, entry in ipairs(self.waste) do
         love.graphics.setColor(entry.color[1], entry.color[2], entry.color[3], entry.life * 255)
@@ -223,15 +254,15 @@ function state:draw()
     end
 
     love.graphics.push()
-    love.graphics.translate(width / 2 * scale, height / 2 * scale)
+    love.graphics.translate(love.window.toPixels(width / 2, height / 2))
 
     love.graphics.setColor(200, 200, 200)
     love.graphics.setFont(self.headerFont)
-    love.graphics.printf(love.window.getTitle(), -200 * scale, -150 * scale, 400 * scale, "center")
+    love.graphics.printf(love.window.getTitle(), love.window.toPixels(-200), love.window.toPixels(-150), love.window.toPixels(400), "center")
 
     love.graphics.setFont(self.itemFont)
     love.graphics.setColor(200, 200, 200)
-    love.graphics.rectangle("fill", -200 * scale, (-60 + (self.selection - 1) * 36) * scale, 400 * scale, 32 * scale)
+    love.graphics.rectangle("fill", love.window.toPixels(-200), love.window.toPixels(-60 + (self.selection - 1) * 36), love.window.toPixels(400, 32))
 
     for i, item in ipairs(self.items) do
         if i == self.selection then
@@ -240,7 +271,7 @@ function state:draw()
             love.graphics.setColor(200, 200, 200)
         end
 
-        love.graphics.print(item[1], (-200 + 4) * scale, (-60 + (i - 1) * 36 + 2) * scale)
+        love.graphics.print(item[1], love.window.toPixels(-200 + 4, -60 + (i - 1) * 36 + 2))
     end
 
     love.graphics.pop()

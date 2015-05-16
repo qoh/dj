@@ -1,8 +1,8 @@
 local state = {}
 
 function state:init()
-    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 36)
-    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+    self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", love.window.toPixels(36))
+    self.itemFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", love.window.toPixels(24))
 end
 
 function state:enter()
@@ -22,11 +22,11 @@ function state:keypressed(key, unicode)
 end
 
 function state:draw()
-    local width, height = love.graphics.getDimensions()
+    local width, height = love.window.fromPixels(love.graphics.getDimensions())
 
     love.graphics.setColor(200, 200, 200)
     love.graphics.setFont(self.headerFont)
-    love.graphics.printf("Help & controls", width / 2 - 400, 50, 800, "center")
+    love.graphics.printf("Help & controls", love.window.toPixels(width / 2 - 400), love.window.toPixels(50), love.window.toPixels(800), "center")
 
     love.graphics.setFont(self.itemFont)
     love.graphics.setColor(200, 200, 200)
@@ -39,7 +39,7 @@ function state:draw()
         "On a gamepad, you can press Y to hit the left and right lane simultaneously.\n" ..
         "\n\n\n" ..
         "Press Escape or B here and in the Settings to go back to the menu.",
-        width / 2 - 450, 150, 900, "left")
+        love.window.toPixels(width / 2 - 450), love.window.toPixels(150), love.window.toPixels(900), "left")
 end
 
 return state

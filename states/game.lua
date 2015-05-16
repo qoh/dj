@@ -1112,39 +1112,41 @@ function state:draw()
     end
 
     -- Draw subtitles
-    local subtitle_y = y + 27
-    love.graphics.setFont(self.regularFont)
-    love.graphics.setColor(255, 255, 255)
+    if self.song.subtitles then
+        local subtitle_y = y + 27
+        love.graphics.setFont(self.regularFont)
+        love.graphics.setColor(255, 255, 255)
 
-    local t_a
-    local t_b
+        local t_a
+        local t_b
 
-    for i, entry in ipairs(self.song.subtitles) do
-        if position < entry[1] then
-            break
-        end
-
-        if position < entry[1] + entry[3] then
-            if t_a then
-                if t_b then
-                    t_a = t_b
-                end
-
-                t_b = entry[2]
-            else
-                t_a = entry[2]
+        for i, entry in ipairs(self.song.subtitles) do
+            if position < entry[1] then
+                break
             end
 
-            -- love.graphics.printf(entry[2], x - 192, subtitle_y, 384, "center")
-            -- subtitle_y = subtitle_y + 18
-        end
-    end
+            if position < entry[1] + entry[3] then
+                if t_a then
+                    if t_b then
+                        t_a = t_b
+                    end
 
-    if t_b then
-        love.graphics.printf(t_a, x - 192, subtitle_y, 384, "center")
-        love.graphics.printf(t_b, x - 192, subtitle_y + 18, 384, "center")
-    elseif t_a then
-        love.graphics.printf(t_a, x - 192, subtitle_y + 9, 384, "center")
+                    t_b = entry[2]
+                else
+                    t_a = entry[2]
+                end
+
+                -- love.graphics.printf(entry[2], x - 192, subtitle_y, 384, "center")
+                -- subtitle_y = subtitle_y + 18
+            end
+        end
+
+        if t_b then
+            love.graphics.printf(t_a, x - 192, subtitle_y, 384, "center")
+            love.graphics.printf(t_b, x - 192, subtitle_y + 18, 384, "center")
+        elseif t_a then
+            love.graphics.printf(t_a, x - 192, subtitle_y + 9, 384, "center")
+        end
     end
 
     -- Draw input overlay
