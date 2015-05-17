@@ -45,6 +45,14 @@ function GS.switch(to, ...)
 	return (to.enter or __NULL__)(to, pre, ...)
 end
 
+function GS.cut(to, ...)
+	assert(to, "Missing argument: Gamestate to switch to")
+	assert(to ~= GS, "Can't call switch with colon operator")
+	local pre = stack[#stack]
+	;(pre.leave or __NULL__)(pre)
+	stack[#stack] = to
+end
+
 function GS.push(to, ...)
 	assert(to, "Missing argument: Gamestate to switch to")
 	assert(to ~= GS, "Can't call push with colon operator")
@@ -94,9 +102,6 @@ end
 -- forward any undefined functions
 setmetatable(GS, {__index = function(_, func)
 	return function(...)
-		-- if func == "touchpressed" then
-		-- 	gamestate.switch(states.delaytest)
-		-- end
 		return (stack[#stack][func] or __NULL__)(stack[#stack], ...)
 	end
 end})

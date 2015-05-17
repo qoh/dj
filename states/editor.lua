@@ -6,6 +6,7 @@ local state = {}
 function state:init()
     self.markerFont = love.graphics.newFont(12)
     self.timeFont = love.graphics.newFont("assets/fonts/Roboto-Light.ttf", 14)
+    self.warningFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 16)
     self.hitSound = love.audio.newSource("assets/Laser_Shoot12.wav")
     self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
 end
@@ -24,6 +25,7 @@ function state:enter(previous, filename, song, data, mods)
     self.audioSource:pause()
 
     self.lastPosition = 0
+    self.unsaved = false
 
     self.mouseLane = nil
     self.mouseBeat = nil
@@ -43,6 +45,14 @@ end
 function state:pause()
     love.keyboard.setKeyRepeat(false)
     self.audioSource:pause()
+end
+
+function state:close()
+    if self.unsaved then
+        gamestate.push(states.prompt, "You have unsaved changes. Are you sure you want to discard them and exit the editor?", gamestate.pop)
+    else
+        gamestate.pop()
+    end
 end
 
 function state:getPosition()
@@ -81,7 +91,7 @@ end
 
 function state:keypressed(key, unicode)
     if key == "escape" then
-        gamestate.switch(states.menu)
+        self:close()
     elseif key == " " then
         if self.audioSource:isPlaying() then
             self.audioSource:pause()
@@ -126,6 +136,7 @@ function state:keypressed(key, unicode)
             file:write(ser(self.song))
             file:close()
 
+            self.unsaved = false
             print("Saved!")
         elseif key == "p" then
             gamestate.push(states.game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
@@ -148,12 +159,14 @@ function state:mousepressed(x, y, button)
             end
 
             table.insert(self.song.notes, {self.mouseBeat, self.mouseLane})
+            self.unsaved = true
         end
     elseif button == "r" then
         local index = self:getSelectedNote()
 
         if index then
             table.remove(self.song.notes, index)
+            self.unsaved = true
         end
     elseif button == "wd" then
         if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
@@ -162,8 +175,10 @@ function state:mousepressed(x, y, button)
             if note and note[3] then
                 if note[3] == 0 then
                     note[3] = nil
+                    self.unsaved = true
                 else
                     note[3] = note[3] - 1
+                    self.unsaved = true
                 end
             end
         else
@@ -176,8 +191,10 @@ function state:mousepressed(x, y, button)
             if note then
                 if not note[3] then
                     note[3] = 1
+                    self.unsaved = true
                 else
                     note[3] = note[3] + 1
+                    self.unsaved = true
                 end
             end
         else
@@ -306,14 +323,17 @@ function state:update(dt)
 
                 if (i_prev and l_prev[2] == f_set) or (not i_prev and f_set == 0) then
                     table.remove(self.song.lanes, i_self)
+                    self.unsaved = true
                 end
             end
         elseif i_prev then
             if not f_legal[l_prev[2]] then
                 table.insert(self.song.lanes, i_prev + 1, {self.mouseBeat, f_set})
+                self.unsaved = true
             end
         elseif not f_legal[0] then
             table.insert(self.song.lanes, 1, {self.mouseBeat, f_set})
+            self.unsaved = true
         end
     end
 end
@@ -614,6 +634,12 @@ function state:draw()
         -- love.graphics.printf(util.secondsToTime(math.floor(position)), bx, by + 1, scaled - 2, "right")
         --
         -- love.graphics.setStencil()
+    end
+
+    if self.unsaved then
+        love.graphics.setFont(self.warningFont)
+        love.graphics.setColor(200, 100, 30)
+        love.graphics.printf("Unsaved", 0, 8, width - 8, "right")
     end
 end
 

@@ -1,3 +1,5 @@
+require "lib.luafft"
+
 local util = require "lib.util"
 local state = {}
 
@@ -6,33 +8,6 @@ function state:init()
     self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
     self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
     self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
-
-    self.bloomCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight(), "normal", 8)
-    self.bloomShader = love.graphics.newShader[[
-       //BlackBulletIV
-       extern vec2 size = vec2(140,140); // 20,20
-       extern int samples = 4; // pixels per axis; higher = bigger glow, worse performance // 2
-       extern float quality = .125; // lower = smaller glow, better quality // .5
-
-       vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc)
-       {
-          vec4 src = Texel(tex, tc);
-          vec4 sum = vec4(0);
-          int diff = (samples - 1) / 2;
-          vec2 sizeFactor = vec2(1) / size * quality;
-
-          for (int x = -diff; x <= diff; x++)
-          {
-             for (int y = -diff; y <= diff; y++)
-             {
-                vec2 offset = vec2(x, y) * sizeFactor;
-                sum += Texel(tex, tc + offset);
-             }
-          }
-
-       return ((sum / (samples * samples)) + src) * color;
-       }
-    ]]
 end
 
 function state:enter(previous, filename, song, data, mods, startFromEditor)
@@ -85,6 +60,14 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
     self.audioSource = love.audio.newSource(self.audioData)
     self.audioSource:setPitch(self.mods.speed or 1)
     self.audioSource:play()
+
+    -- Set up the audio analysis stuff
+    self.frequencies = {}
+    self.frequencyCount = 2048
+
+    for i=1, self.frequencyCount do
+        self.frequencies[i] = 0
+    end
 
     if startFromEditor then
         self.startFromEditor = true
@@ -429,6 +412,13 @@ function state:isLanePressed(lane)
     end
 end
 
+local complex = require "lib.complex"
+require "lib.luafft"
+
+function state:getFrequencyBucket(freq)
+    return freq * self.frequencyCount / 44100 + 1
+end
+
 function state:update(dt)
     if self.audioSource:isStopped() then
         if self.startFromEditor then
@@ -440,6 +430,42 @@ function state:update(dt)
         return
     end
 
+    -- Update audio analysis
+    -- do
+    --     local samples = {}
+    --     local position = self.audioSource:tell("samples")
+    --
+    --     if self.audioData:getChannels() == 2 then
+    --         for i=position, position + (self.frequencyCount - 1) do
+    --             local sample = (self.audioData:getSample(i * 2) + self.audioData:getSample(i * 2 + 1)) * 0.5
+    --             table.insert(samples, complex.new(sample, 0))
+    --         end
+    --     else
+    --         for i=position, position + (self.frequencyCount - 1) do
+    --             table.insert(samples, complex.new(soundData:getSample(i), 0))
+    --         end
+    --     end
+    --
+    --     local spectrum = fft(samples, false)
+    --
+    --     local bassCutoff = self:getFrequencyBucket(220)
+    --     local bassVolume = 0
+    --
+    --     for i=1, self.frequencyCount do
+    --         self.frequencies[i] = math.max(
+    --             spectrum[i]:abs() / (self.frequencyCount / 2),
+    --             self.frequencies[i] - self.frequencies[i] * dt * 4)
+    --
+    --         if i < bassCutoff then
+    --             bassVolume = bassVolume + 10 ^ (self.frequencies[i] / 20)
+    --         end
+    --     end
+    --
+    --     self.beatVolume = (bassVolume - math.floor(bassCutoff)) / (1 / bassCutoff)
+    --     -- rotationTime = rotationTime + bassVolume
+    -- end
+
+    --
     dt = dt * (self.mods.speed or 1)
 
     for i=1, 3 do
@@ -722,6 +748,8 @@ function state:update(dt)
     end
 
     love.graphics.setBackgroundColor(100, 100, 100)
+    -- local v = (self.beatVolume / 8) * 255
+    -- love.graphics.setBackgroundColor(v, v, v)
 end
 
 local function draw_fader_back(x, y)
@@ -818,8 +846,6 @@ function state:draw()
 
     love.graphics.pop()
 
-    self.bloomCanvas:clear()
-    love.graphics.setCanvas(self.bloomCanvas)
     -- Draw combo steps
     for i=1, 7 do
         if self.combo >= 24 or self.combo % 8 >= i then
@@ -849,12 +875,6 @@ function state:draw()
         love.graphics.setColor(200, 100, 30)
         love.graphics.printf("REWIND", x + 120, y - 64 - 7 * 12 - 35 - 24, 64, "right")
     end
-
-    love.graphics.setCanvas()
-    love.graphics.setShader(self.bloomShader)
-    love.graphics.setColor(255, 255, 255)
-    love.graphics.draw(self.bloomCanvas)
-    love.graphics.setShader()
 
     -- local rating = (1 - self.stats.missCount / self.stats.noteCount)
     -- rating = math.floor(rating * 1000 + self:getWindow()) / 10
@@ -1240,6 +1260,23 @@ function state:draw()
     -- love.graphics.print(love.timer.getFPS(), 2, 2)
 
     love.graphics.setShader()
+
+    -- love.graphics.setColor(255, 255, 255)
+    -- love.graphics.setLineWidth(1)
+    --
+    -- local y = height / 2
+    --
+    -- for i=1, 384 do
+    --     local x = width / 2 - 192 + i + 0.5
+    --     local n = math.floor(self:getFrequencyBucket(220) + i / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
+    --     love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
+    -- end
+
+    -- for i = math.floor(self:getFrequencyBucket(220)), math.floor(math.min(self.frequencyCount, self:getFrequencyBucket(22050))) do
+    --     local x = width / 2 - 192 + (i - math.floor(self:getFrequencyBucket(220))) + 0.5
+    --     -- love.graphics.setColor(255, 255, 255, math.abs(value) * 10)
+    --     love.graphics.line(x, 0, x, self.frequencies[i] * 720)
+    -- end
 end
 
 return state
