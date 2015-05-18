@@ -25,6 +25,7 @@ states = {
 }
 
 function love.load()
+    love.mouse.setCursor(love.mouse.newCursor("assets/cursor_pointer3D_shadow.png", 0, 0))
     if love.filesystem.isFile("assets/gamecontrollerdb.txt") then
         love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
         print("Loaded assets/gamecontrollerdb.txt mappings")
