@@ -135,6 +135,10 @@ function state:enter()
     -- self.selection = 1
     -- self:setControlScheme("mouse")
 
+    self.music = love.audio.newSource("assets/sounds/music/DJ Hero Clone - Menu Music WIP.mp3", "stream")
+    self.music:setLooping(true)
+    self.music:play()
+
     self.controlScheme = "mouse"
     self.focused = nil
     self.screen = self.screenProps.main
@@ -165,8 +169,19 @@ function state:setControlScheme(scheme)
     self.controlScheme = scheme
 end
 
+function state:pause()
+    self.music:pause()
+end
+
+function state:resume()
+    self.music:play()
+end
+
 function state:leave()
     love.keyboard.setKeyRepeat(false)
+
+    self.music:stop()
+    self.music = nil
     -- self.worms = nil
     -- self.waste = nil
 end
