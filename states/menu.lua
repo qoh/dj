@@ -362,8 +362,8 @@ local function round_worm_dir(dx, dy)
     -- end
 
     -- Round to nearest 90 degrees
-    -- local round = math.pi / 4
-    -- theta = math.floor(theta / round + 0.5) * round
+    local round = math.pi / 2
+    theta = math.floor(theta / round + 0.5) * round
     return math.cos(theta), math.sin(theta)
 end
 

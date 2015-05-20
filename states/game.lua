@@ -312,6 +312,29 @@ function state:keypressed(key, unicode)
             self:lanePressed(3)
         elseif key == "kp3" or key == "/" then
             self:lanePressed(self.fade == 1 and 5 or 4)
+        elseif key == "kp4" then
+            local position = self:getCurrentPosition()
+            local lane = self.fade == -1 and 1 or 2
+            print(lane)
+
+            for i, note in ipairs(self.song.notes) do
+                if position < note[1] then
+                    break
+                end
+
+                if note[3] and note[4] and note[2] == lane and position < note[1] + note[3] then
+                -- if note[3] and note[4] and note[2] == lane then
+                    for i, scratch in ipairs(note[4]) do
+                        local d = math.abs(position - note[1] - scratch[1])
+
+                        if scratch[2] == -1 and d < 0.5 then
+                            self.stats.score = self.stats.score + 50 * self:getMultiplier()
+                        end
+                    end
+
+                    break
+                end
+            end
         end
     end
 end
@@ -778,6 +801,62 @@ local function draw_button(x, y, color, dot)
     love.graphics.circle("fill", x, y, 6)
 end
 
+-- local function draw_held_note(x, y1, y2, position, scale, color, scratches, held)
+--     o65 = 0.65 + (flash or 0)
+--
+--     local tipPrimary = {color[1] * o65, color[2] * o65, color[3] * o65}
+--     local tipSecondary = {color[1] * 0.10, color[2] * 0.10, color[3] * 0.10}
+--     local shaftPrimary
+--     local shaftSecondary
+--
+--     if not held and position > y1 then
+--         shaftPrimary = {60, 60, 60}
+--         shaftSecondary = {25, 25, 25}
+--     else
+--         shaftPrimary = tipPrimary
+--         shaftSecondary = tipSecondary
+--     end
+--
+--     love.graphics.setColor(shaftPrimary)
+--     love.graphics.circle("fill", x, y2, 16, 32)
+--     love.graphics.setColor(shaftSecondary)
+--     love.graphics.circle("line", x, y2, 16, 32)
+--     love.graphics.setColor(shaftPrimary)
+--     love.graphics.rectangle("fill", x - 16, y2, 32, y1 - y2)
+--     love.graphics.setColor(shaftSecondary)
+--     love.graphics.line(x - 16, y2, x - 16, y1)
+--     love.graphics.line(x + 16, y2, x + 16, y1)
+--
+--     -- Draw some arrows or something
+--     if scratches then
+--         love.graphics.setColor(255, 255, 255)
+--         love.graphics.setLineWidth(4)
+--
+--         for i, scratch in ipairs(scratches) do
+--             local y = y1 - scratch[1] * scale
+--
+--             if scratch[2] == -1 then
+--                 love.graphics.polygon("line", x, y - 10, x - 10, y + 10, x + 10, y + 10)
+--             elseif scratch[2] == 1 then
+--                 love.graphics.polygon("line", x, y + 10, x - 10, y - 10, x + 10, y - 10)
+--             elseif scratch[2] == 0 then
+--                 love.graphics.setLineJoin("bevel")
+--                 love.graphics.line(x - 12, y, x - 4, y + 10, x - 4, y - 10)
+--                 love.graphics.line(x + 12, y, x + 4, y - 10, x + 4, y + 10)
+--                 love.graphics.setLineJoin("miter")
+--             end
+--         end
+--
+--         love.graphics.setLineWidth(2)
+--     end
+--
+--     -- Draw just the tip
+--     love.graphics.setColor(tipPrimary)
+--     love.graphics.circle("fill", x, y1, 16, 32)
+--     love.graphics.setColor(tipSecondary)
+--     love.graphics.circle("line", x, y1, 16, 32)
+-- end
+
 function state:draw()
     local width, height = love.graphics.getDimensions()
     local position = self:getCurrentPosition()
@@ -990,6 +1069,8 @@ function state:draw()
         end
     end
 
+    love.graphics.setLineWidth(2)
+
     -- Draw notes
     for i, note in ipairs(self.song.notes) do
         local offset = note[1] - position
@@ -1022,52 +1103,139 @@ function state:draw()
                     end
                 end
 
-                if held then
-                    local flash = 0.3 * math.sin(held[2] * math.pi * 5)
-                    local o65 = 0.65 + flash
+                local scale = self:getBeatScale()
+                -- draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, held and held[2])
 
-                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                    love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                elseif not old then
-                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                else
-                    love.graphics.setColor(60, 60, 60)
-                    love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(25, 25, 25)
-                    love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(60, 60, 60)
-                    love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                    love.graphics.setColor(25, 25, 25)
-                    love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                    love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                    love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                    love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                    love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                    love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                local o65 = 0.65
+
+                if held then
+                    o65 = o65 + 0.3 * math.sin(held[2] * math.pi * 5)
                 end
+
+                local tipPrimary = {color[1] * o65, color[2] * o65, color[3] * o65}
+                local tipSecondary = {color[1] * 0.10, color[2] * 0.10, color[3] * 0.10}
+                local shaftPrimary
+                local shaftSecondary
+
+                if not held and old then
+                    shaftPrimary = {60, 60, 60}
+                    shaftSecondary = {25, 25, 25}
+                else
+                    shaftPrimary = tipPrimary
+                    shaftSecondary = tipSecondary
+                end
+
+                local x = lanes[note[2]]
+                local y2 = y - last * scale
+                local y1 = y - offset * scale
+
+                love.graphics.setColor(shaftPrimary)
+                love.graphics.circle("fill", x, y2, 16, 32)
+                love.graphics.setColor(shaftSecondary)
+                love.graphics.circle("line", x, y2, 16, 32)
+                love.graphics.setColor(shaftPrimary)
+                love.graphics.rectangle("fill", x - 16, y2, 32, y1 - y2)
+                love.graphics.setColor(shaftSecondary)
+                love.graphics.line(x - 16, y2, x - 16, y1)
+                love.graphics.line(x + 16, y2, x + 16, y1)
+
+                -- Draw some arrows or something
+                if note[4] then
+                    love.graphics.setColor(255, 255, 255)
+                    love.graphics.setLineWidth(4)
+
+                    for i, scratch in ipairs(note[4]) do
+                        local p = note[1] + scratch[1]
+
+                        if p > position then
+                            local yy = y - (p - position) * scale
+
+                            if scratch[2] == -1 then
+                                love.graphics.polygon("line", x, yy - 10, x - 10, yy + 10, x + 10, yy + 10)
+                            elseif scratch[2] == 1 then
+                                love.graphics.polygon("line", x, yy + 10, x - 10, yy - 10, x + 10, yy - 10)
+                            elseif scratch[2] == 0 then
+                                love.graphics.setLineJoin("bevel")
+                                love.graphics.line(x - 12, yy, x - 4, yy + 10, x - 4, yy - 10)
+                                love.graphics.line(x + 12, yy, x + 4, yy - 10, x + 4, yy + 10)
+                                love.graphics.setLineJoin("miter")
+                            end
+                        end
+                    end
+
+                    love.graphics.setLineWidth(2)
+                end
+
+                -- Draw just the tip
+                love.graphics.setColor(tipPrimary)
+                love.graphics.circle("fill", x, y1, 16, 32)
+                love.graphics.setColor(tipSecondary)
+                love.graphics.circle("line", x, y1, 16, 32)
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
+                -- elseif not old then
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
+                -- else
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
+                -- end
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
+                -- elseif not old then
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
+                -- else
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
+                -- end
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     local o65 = 0.65 + flash
+                --
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- elseif not old then
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- else
+                --     love.graphics.setColor(60, 60, 60)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(25, 25, 25)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(60, 60, 60)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(25, 25, 25)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- end
             end
         elseif not self.noteUsed[note] and offset >= 0 then
             local color = colorsByLane[note[2]]

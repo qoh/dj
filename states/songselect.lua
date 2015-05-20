@@ -382,11 +382,19 @@ function state:mousereleased(x, y, button)
         local index = self:findEntryColliding(love.window.fromPixels(x, y))
 
         if index then
-            if index == self.indexSong and self.timeSinceClick and self.timeSinceClick < 0.2 then
-                self:continue()
+            if index == self.indexSong then
+                if self.timeSinceClick and self.timeSinceClick < 0.2 then
+                    self:continue()
+                end
             else
                 self:select(index, 1)
             end
+
+            -- if index == self.indexSong and self.timeSinceClick and self.timeSinceClick < 0.2 then
+            --     self:continue()
+            -- else
+            --     self:select(index, 1)
+            -- end
         end
 
         self.timeSinceClick = 0
