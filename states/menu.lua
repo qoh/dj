@@ -479,11 +479,11 @@ function state:update(dt)
 end
 
 function state:draw()
-    local time = love.timer.getTime()
+    local time = self.music:tell() / 2
     local strength = 1 - (time - math.floor(time))
-    strength = strength ^ 3
+    strength = strength ^ 2
 
-    love.graphics.setLineWidth(love.window.toPixels(2 + 2 * strength))
+    love.graphics.setLineWidth(love.window.toPixels(3 * strength))
 
     for i, entry in ipairs(self.waste) do
         love.graphics.setColor(entry.color[1], entry.color[2], entry.color[3], entry.life * 255)
@@ -504,10 +504,11 @@ function state:draw()
     if self.screen.title then
         love.graphics.setFont(self.headerFont)
 
-        for i=2, 0, -1 do
-            local value = (1 - i / 2) * 255
-            love.graphics.setColor(value, value, value)
-            love.graphics.print(self.screen.title, love.window.toPixels(width / 14), love.window.toPixels(height / 5 + 2 * i))
+        for i=8, 0, -1 do
+            local value = (1 - i / 8) * 255
+            local distance = 2 * strength
+            love.graphics.setColor(value, value, value, math.max(value * strength, i == 0 and 255 or 0))
+            love.graphics.print(self.screen.title, love.window.toPixels(width / 14), love.window.toPixels(height / 5 + distance * i))
         end
     end
 
