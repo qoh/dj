@@ -1,6 +1,7 @@
 require "lib.luafft"
 
 local util = require "lib.util"
+local gamestate = require "lib.hump.gamestate"
 local state = {}
 
 function state:init()

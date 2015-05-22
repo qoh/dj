@@ -9,6 +9,7 @@ end
 
 local thisFile = (...):gsub("%.", "/") .. ".lua"
 
+local gamestate = require "lib.hump.gamestate"
 local state = {}
 
 function state:enter(previous, filename, callback)

@@ -1,14 +1,3 @@
-if love.filesystem.isFused() then
-    local dir = love.filesystem.getSourceBaseDirectory()
-    local success = love.filesystem.mount(dir, "")
-
-    if not success then
-        print("Failed to mount source base directory in fused mode")
-    end
-end
-
-gamestate = require "lib.hump.gamestate"
-
 states = {
     menu = require "states.menu",
     settings = require "states.settings",
@@ -24,8 +13,20 @@ states = {
     editor = require "states.editor"
 }
 
+local gamestate = require "lib.hump.gamestate"
+
 function love.load()
+    if love.filesystem.isFused() then
+        local dir = love.filesystem.getSourceBaseDirectory()
+        local success = love.filesystem.mount(dir, "")
+
+        if not success then
+            print("Failed to mount source base directory in fused mode")
+        end
+    end
+
     love.mouse.setCursor(love.mouse.newCursor("assets/cursor_pointer3D_shadow.png", 0, 0))
+
     if love.filesystem.isFile("assets/gamecontrollerdb.txt") then
         love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
         print("Loaded assets/gamecontrollerdb.txt mappings")

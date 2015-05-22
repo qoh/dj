@@ -1,3 +1,4 @@
+local gamestate = require "lib.hump.gamestate"
 local state = {}
 
 function state:init()

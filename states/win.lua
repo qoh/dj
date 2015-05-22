@@ -1,3 +1,4 @@
+local gamestate = require "lib.hump.gamestate"
 local util = require "lib.util"
 local state = {}
 
