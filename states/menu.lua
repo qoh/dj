@@ -28,7 +28,7 @@ function state:init()
 
     self.vignette = love.graphics.newImage("assets/vignette.png")
 
-    local mods = {speed = 1}
+    local mods = {speed = 1.0}
 
     -- self.items = {
     --     {"Play", function()

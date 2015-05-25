@@ -143,6 +143,74 @@ function state:keypressed(key, unicode)
         elseif key == "p" then
             gamestate.push(states.game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
         end
+    elseif key == "w" then
+        self:changeScratchStuff(-1)
+    elseif key == "s" then
+        self:changeScratchStuff(0)
+    elseif key == "x" then
+        self:changeScratchStuff(1)
+    elseif key == "a" then
+        for i, note in ipairs(self.song.notes) do
+            if self.mouseLane == note[2] and note[3] and note[4] and note[1] <= self.mouseBeat and note[1] + note[3] >= self.mouseBeat then
+                local index = #note[4]
+                local offset = self.mouseBeat - note[1]
+
+                for i, scratch in ipairs(note[4]) do
+                    if scratch[1] == offset then
+                        table.remove(note[4], i)
+                        self.unsaved = true
+
+                        if not note[4][1] then
+                            note[4] = nil
+                        end
+
+                        return
+                    end
+
+                    if scratch[1] > offset then
+                        break
+                    end
+                end
+
+                break
+            end
+        end
+    end
+end
+
+function state:changeScratchStuff(direction)
+    for i, note in ipairs(self.song.notes) do
+        if note[2] == self.mouseLane and note[3] and note[1] <= self.mouseBeat and note[1] + note[3] >= self.mouseBeat then
+            if not note[4] then
+                note[4] = {}
+            end
+
+            local index = #note[4]
+            local offset = self.mouseBeat - note[1]
+
+            for i, scratch in ipairs(note[4]) do
+                if scratch[1] == offset then
+                    print("replacing at " .. i)
+                    if scratch[2] ~= direction then
+                        self.unsaved = true
+                        scratch[2] = direction
+                    end
+
+                    return
+                end
+
+                if scratch[1] > offset then
+                    break
+                end
+
+                index = i
+            end
+
+            table.insert(note[4], index, {offset, direction})
+            self.unsaved = true
+            print("inserted new note for " .. offset .. " at " .. index)
+            break
+        end
     end
 end
 
@@ -153,6 +221,10 @@ function state:mousepressed(x, y, button)
             local index = #self.song.notes
 
             for i, note in ipairs(self.song.notes) do
+                if note[1] == self.mouseBeat then
+                    return
+                end
+
                 if note[1] > self.mouseBeat then
                     break
                 end
@@ -160,7 +232,7 @@ function state:mousepressed(x, y, button)
                 index = i
             end
 
-            table.insert(self.song.notes, {self.mouseBeat, self.mouseLane})
+            table.insert(self.song.notes, index, {self.mouseBeat, self.mouseLane})
             self.unsaved = true
         end
     elseif button == "r" then
@@ -568,6 +640,34 @@ function state:draw()
                 love.graphics.circle("fill", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
                 love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
                 love.graphics.circle("line", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+
+                if note[4] then
+                    local x = lanes[note[2]]
+
+                    love.graphics.setColor(255, 255, 255)
+                    love.graphics.setLineWidth(4)
+
+                    for i, scratch in ipairs(note[4]) do
+                        local p = note[1] + scratch[1]
+
+                        if p > position then
+                            local yy = y - (p - position) * BEAT_SCALE
+
+                            if scratch[2] == -1 then
+                                love.graphics.polygon("line", x, yy - 10, x - 10, yy + 10, x + 10, yy + 10)
+                            elseif scratch[2] == 1 then
+                                love.graphics.polygon("line", x, yy + 10, x - 10, yy - 10, x + 10, yy - 10)
+                            elseif scratch[2] == 0 then
+                                love.graphics.setLineJoin("bevel")
+                                love.graphics.line(x - 12, yy, x - 4, yy + 10, x - 4, yy - 10)
+                                love.graphics.line(x + 12, yy, x + 4, yy - 10, x + 4, yy + 10)
+                                love.graphics.setLineJoin("miter")
+                            end
+                        end
+                    end
+
+                    love.graphics.setLineWidth(2)
+                end
             end
         elseif offset >= 0 then
             local color = colorsByLane[note[2]]
@@ -643,6 +743,10 @@ function state:draw()
         love.graphics.setColor(200, 100, 30)
         love.graphics.printf("Unsaved", 0, 8, width - 8, "right")
     end
+
+    love.graphics.setFont(self.warningFont)
+    love.graphics.setColor(200, 100, 30)
+    love.graphics.print(love.mouse.getX() .. " " .. love.mouse.getY(), 64, 64)
 end
 
 return state

@@ -33,6 +33,7 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
     self.combo = 0
     self.rewind = false
     self.noteUsed = {}
+    self.scratchUsed = {}
     self.heldNotes = {}
     self.fadeUsed = {}
     self.laneUsed = {
@@ -144,7 +145,7 @@ function state:increaseCombo()
         self.messageText = self.combo .. " note streak!"
     end
 
-    if self.combo > 0 and self.combo % 60 == 0 then
+    if self.combo > 0 and self.combo % 60 == 0 and not self.rewind then
         self.rewind = true
 
         self.messageTime = 2
@@ -314,28 +315,33 @@ function state:keypressed(key, unicode)
         elseif key == "kp3" or key == "/" then
             self:lanePressed(self.fade == 1 and 5 or 4)
         elseif key == "kp4" then
-            local position = self:getCurrentPosition()
-            local lane = self.fade == -1 and 1 or 2
-            print(lane)
+            self:laneScratched(self.fade == -1 and 1 or 2, -1)
+        end
+    end
+end
 
-            for i, note in ipairs(self.song.notes) do
-                if position < note[1] then
-                    break
-                end
+-- -1 iz up, 0 iz random, 1 iz down
+function state:laneScratched(lane, dir)
+    local position = self:getCurrentPosition()
+    print(lane)
 
-                if note[3] and note[4] and note[2] == lane and position < note[1] + note[3] then
-                -- if note[3] and note[4] and note[2] == lane then
-                    for i, scratch in ipairs(note[4]) do
-                        local d = math.abs(position - note[1] - scratch[1])
+    for i, note in ipairs(self.song.notes) do
+        if position < note[1] then
+            break
+        end
 
-                        if scratch[2] == -1 and d < 0.5 then
-                            self.stats.score = self.stats.score + 50 * self:getMultiplier()
-                        end
-                    end
+        if note[3] and note[4] and note[2] == lane and position < note[1] + note[3] then
+        -- if note[3] and note[4] and note[2] == lane then
+            for i, scratch in ipairs(note[4]) do
+                local d = position - note[1] - scratch[1]
 
-                    break
+                if not self.scratchUsed[scratch] and (scratch[2] == dir or scratch[2] == 0) and math.abs(d) < 0.5 then
+                    self.scratchUsed[scratch] = note
+                    self:noteHit(note, d)
                 end
             end
+
+            break
         end
     end
 end
@@ -360,6 +366,8 @@ function state:keyreleased(key, unicode)
             self:laneReleased(3)
         elseif key == "kp3" or key == "/" then
             self:laneReleased(self.fade == 1 and 5 or 4)
+        elseif key == "kp4" then
+            self:laneScratched(self.fade == -1 and 1 or 2, 1)
         end
     end
 end
@@ -694,6 +702,17 @@ function state:update(dt)
                     end
 
                     self.noteUsed = newNoteUsed
+
+                    -- Exorcism on scratches
+                    local newScratchUsed = {}
+
+                    for scratch, note in pairs(self.scratchUsed) do
+                        if position >= note[1] + scratch[1] then
+                            newScratchUsed[scratch] = note
+                        end
+                    end
+
+                    self.scratchUsed = newScratchUsed
                 end
             end
 
@@ -966,7 +985,7 @@ function state:draw()
     love.graphics.setLineWidth(2)
 
     if self.song.mode == "5key" then
-        draw_button(lanes[1], y, self:isLanePressed(1) and colorsByLane[1], colorsByLane[1])
+        draw_button(lanes[1], y, self:islanePressed(1) and colorsByLane[1], colorsByLane[1])
         draw_button(lanes[2], y, self:isLanePressed(2) and colorsByLane[2], colorsByLane[2])
         draw_button(lanes[3], y, self:isLanePressed(3) and colorsByLane[3], colorsByLane[3])
         draw_button(lanes[4], y, self:isLanePressed(4) and colorsByLane[4], colorsByLane[4])
