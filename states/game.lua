@@ -12,6 +12,8 @@ function state:init()
 end
 
 function state:enter(previous, filename, song, data, mods, startFromEditor)
+  love.mouse.setVisible(false)
+
     self.mods = mods or {}
 
     self.filename = filename
@@ -81,6 +83,8 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
 end
 
 function state:leave()
+  love.mouse.setVisible(true)
+
     self.startFromEditor = false
     self.song = nil
 
@@ -95,6 +99,8 @@ function state:leave()
 end
 
 function state:pause()
+  love.mouse.setVisible(true)
+
     self.audioSource:pause()
 
     local joystick = love.joystick:getJoysticks()[1]
@@ -104,6 +110,8 @@ function state:pause()
 end
 
 function state:resume()
+  love.mouse.setVisible(false)
+
     if self.startTimer <= 0 then
         self.audioSource:play()
     end

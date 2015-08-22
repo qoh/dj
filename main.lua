@@ -25,7 +25,7 @@ function love.load()
         end
     end
 
-    -- love.mouse.setCursor(love.mouse.newCursor("assets/cursor_pointer3D_shadow.png", 0, 0))
+    love.mouse.setCursor(love.mouse.newCursor("assets/cursor_pointer3D_shadow.png", 0, 0))
 
     if love.filesystem.isFile("assets/gamecontrollerdb.txt") then
         love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
@@ -34,10 +34,6 @@ function love.load()
 
     gamestate.registerEvents()
     gamestate.switch(states.menu)
-end
-
-function love.draw()
-    love.graphics.translate(-7, -31)
 end
 
 -- function love.touchpressed(id,x,y,p)

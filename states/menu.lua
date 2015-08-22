@@ -180,6 +180,7 @@ end
 
 function state:leave()
     love.keyboard.setKeyRepeat(false)
+    love.mouse.setVisible(true)
 
     self.music:stop()
     self.music = nil

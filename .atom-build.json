@@ -1,5 +1,17 @@
 {
-    "cmd": "C:\\Program Files\\LOVE\\LOVE.exe",
-    "sh": false,
-    "args": ["{PROJECT_PATH}"]
+  "cmd": "love",
+  "sh": true,
+  "args": ["{PROJECT_PATH}"],
+  "targets": {
+    "nightly": {
+      "cmd": "love-nightly-default",
+      "sh": true,
+      "args": ["{PROJECT_PATH}"]
+    },
+    "win32": {
+      "cmd": "C:\\Program Files\\LOVE\\love.exe",
+      "sh": false,
+      "args": ["{PROJECT_PATH}"]
+    }
+  }
 }
