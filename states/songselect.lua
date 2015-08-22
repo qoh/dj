@@ -362,16 +362,16 @@ end
 -- end
 
 function state:mousemoved(x, y, dx, dy)
-    if love.mouse.isDown("l") then
+    if love.mouse.isDown(1) then
         self.isMouseScroll = true
         self.scrollSpeed = love.window.fromPixels(-dy) / love.timer.getDelta()
     end
 end
 
-function state:mousepressed(x, y, button)
-    if button == "wd" then
+function state:wheelmoved(x, y)
+    if y < 0 then
         self.scrollSpeed = self.scrollSpeed + 288 * 2
-    elseif button == "wu" then
+    elseif y > 0 then
         self.scrollSpeed = self.scrollSpeed - 288 * 2
     end
 
@@ -379,7 +379,7 @@ function state:mousepressed(x, y, button)
 end
 
 function state:mousereleased(x, y, button)
-    if button == "l" and not self.isMouseScroll then
+    if button == 1 and not self.isMouseScroll then
         local index = self:findEntryColliding(love.window.fromPixels(x, y))
 
         if index then

@@ -355,7 +355,7 @@ function state:mousereleased(x, y, button)
     self:setControlScheme("mouse")
     self:setFocus(self:findMouseFocus(love.window.fromPixels(x, y)))
 
-    if button == "l" then
+    if button == 1 then
         self:activate()
     end
 end

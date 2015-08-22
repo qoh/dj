@@ -95,9 +95,11 @@ function state:draw()
     local cx = love.window.toPixels(width / 2)
     local cy = love.window.toPixels(height / 2)
 
-    love.graphics.setInvertedStencil(function()
+    love.graphics.stencil(function()
         love.graphics.circle("fill", cx, cy, love.window.toPixels(radius * 0.8, radius * 1.6))
     end)
+
+    love.graphics.setStencilTest(true, true)
 
     -- Draw empty part
     love.graphics.setColor(32, 32, 32, self.fade * 200)
@@ -110,7 +112,7 @@ function state:draw()
     love.graphics.setColor(150, 150, 150, self.fade * 255)
     love.graphics.arc("fill", cx, cy, radius, a1, a2, radius * 2)
 
-    love.graphics.setStencil()
+    love.graphics.setStencilTest(false)
 end
 
 return state

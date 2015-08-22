@@ -116,10 +116,10 @@ end
 function state:mousepressed(x, y, button)
     x, y = love.window.fromPixels(x, y)
 
-    if button == "l" then
+    if button == 1 then
         local i = x - love.window.fromPixels(love.graphics.getWidth() / 2)
         local j = y - love.window.fromPixels(love.graphics.getHeight() / 2)
-        
+
         if math.abs(i) > 300 * self.visibility and math.abs(y) > 200 * self.visibility then
             self.closing = true
         elseif self:selectFromMouse(x, y) then

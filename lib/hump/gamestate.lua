@@ -81,7 +81,7 @@ local all_callbacks = {
 	'mousepressed', 'mousereleased', 'mousemoved', 'quit', 'resize', 'textinput',
 	'threaderror', 'update', 'visible', 'gamepadaxis', 'gamepadpressed',
 	'gamepadreleased', 'joystickadded', 'joystickaxis', 'joystickhat',
-	'joystickpressed', 'joystickreleased', 'joystickremoved',
+	'joystickpressed', 'joystickreleased', 'joystickremoved', 'wheelmoved',
 
 	-- love-android-sdl-2
 	'touchpressed', 'touchreleased', 'touchmoved'
