@@ -492,7 +492,7 @@ function state:draw()
             end
 
             detail =
-                util.secondsToTime(math.ceil(load.length))
+                util.secondsToTime(math.ceil(load.length or 0))
                 .. "     " .. #load.notes .. " notes"
                 .. "     " .. #load.lanes .. " fades"
 
@@ -502,7 +502,7 @@ function state:draw()
         else
             local load = self.loads[song[1]]
             title = load.title .. " - " .. load.author
-            detail = util.secondsToTime(math.ceil(load.length))
+            detail = util.secondsToTime(math.ceil(load.length or 0))
 
             if #song > 1 then
                 detail = detail .. "     " .. #song .. " difficulties"
