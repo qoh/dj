@@ -2,7 +2,7 @@ function love.conf(t)
     settings = {
         fullscreen = false,
         vsync = true,
-        fsaa = 8,
+        msaa = 8,
         ignoreGamepad = false,
         showInput = false
     }

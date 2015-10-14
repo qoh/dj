@@ -5,10 +5,12 @@ local gamestate = require "lib.hump.gamestate"
 local state = {}
 
 function state:init()
-    self.regularFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
-    self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
-    self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
-    self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+  self.glowImage = love.graphics.newImage("assets/glow.png")
+
+  self.regularFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 14)
+  self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
+  self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
+  self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
 function state:enter(previous, filename, song, data, mods, startFromEditor)
@@ -60,6 +62,12 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
         [3] = 0
     }
 
+    self.glowStrength = {
+      [1] = 0,
+      [2] = 0,
+      [3] = 0
+    }
+
     self.audioData = data
     self.audioSource = love.audio.newSource(self.audioData)
     self.audioSource:setPitch(self.mods.speed or 1)
@@ -79,6 +87,22 @@ function state:enter(previous, filename, song, data, mods, startFromEditor)
         self.audioSource:seek(startFromEditor * (1 / (self.song.bpm / 60)))
     else
         self.audioSource:pause()
+    end
+
+    self.particles = {
+      [1] = love.graphics.newParticleSystem(self.glowImage, 32),
+      [2] = love.graphics.newParticleSystem(self.glowImage, 32),
+      [3] = love.graphics.newParticleSystem(self.glowImage, 32)
+    }
+
+    for i=1, 3 do
+      self.particles[i]:setLinearAcceleration(0, 100)
+      self.particles[i]:setEmissionRate(0)
+      self.particles[i]:setSizes(0.3)
+      self.particles[i]:setSpread(math.pi / 3)
+      self.particles[i]:setSpeed(50, 70)
+      self.particles[i]:setParticleLifetime(2, 2)
+      self.particles[i]:setDirection(math.pi / 4 + math.pi / 6)
     end
 end
 
@@ -172,10 +196,16 @@ function state:noteHit(note, offset)
 
     if note[2] == 1 or note[2] == 2 then
         self.laneUsed[1] = true
+        self.glowStrength[1] = 1
+        self.particles[1]:emit(4)
     elseif note[2] == 4 or note[2] == 5 then
         self.laneUsed[3] = true
+        self.glowStrength[3] = 1
+        self.particles[3]:emit(4)
     elseif note[2] == 3 then
         self.laneUsed[2] = true
+        self.glowStrength[2] = 1
+        self.particles[2]:emit(4)
     end
 
     table.insert(self.hitEffects, {0, note[2]})
@@ -256,7 +286,7 @@ function state:lanePressed(lane)
         end
 
         if note[2] == lane and not self.noteUsed[note] then
-            self.noteUsed[note] = true
+            self.noteUsed[note] = 1
             self:noteHit(note, offset)
 
             if note[3] then
@@ -508,12 +538,32 @@ function state:update(dt)
     --
     dt = dt * (self.mods.speed or 1)
 
+    local width, height = love.graphics.getDimensions()
+
+    local x = width / 2
+    local y = height - 64
+
+    local lanes = {
+        [1] = x - 128,
+        [2] = x - 64,
+        [3] = x,
+        [4] = x + 64,
+        [5] = x + 128
+    }
+
+    self.particles[1]:setPosition(lanes[1] + self.faderAnimLeft  * 64, y)
+    self.particles[2]:setPosition(lanes[3]                           , y)
+    self.particles[3]:setPosition(lanes[4] + self.faderAnimRight * 64, y)
+
     for i=1, 3 do
         if self.laneUsed[i] then
             self.laneFillAnim[i] = math.min(1, self.laneFillAnim[i] + dt)
         else
             self.laneFillAnim[i] = 0
         end
+
+        self.glowStrength[i] = math.max(0, self.glowStrength[i] - dt * 2)
+        self.particles[i]:update(dt)
     end
 
     local position = self:getCurrentPosition()
@@ -701,11 +751,11 @@ function state:update(dt)
                     local newNoteUsed = {}
                     local position = self:getCurrentPosition()
 
-                    for note in pairs(self.noteUsed) do
+                    for note, value in pairs(self.noteUsed) do
                         local offset = note[1] - position
 
                         if offset < 0 then
-                            newNoteUsed[note] = true
+                            newNoteUsed[note] = value
                         end
                     end
 
@@ -775,6 +825,15 @@ function state:update(dt)
 
             while item[3] >= 0.1 do
                 self.stats.score = self.stats.score + 5 * self:getMultiplier()
+                local rawr = item[1][2]
+                if rawr == 1 or rawr == 2 then
+                  rawr = 1
+                elseif rawr == 4 or rawr == 5 then
+                  rawr = 3
+                else
+                  rawr = 2
+                end
+                self.particles[rawr]:emit(1)
                 item[3] = item[3] - 0.1
             end
 
@@ -792,7 +851,7 @@ function state:update(dt)
             end
 
             if not self.noteUsed[note] then
-                self.noteUsed[note] = true
+                self.noteUsed[note] = 0
                 self:noteMiss(note)
             end
         end
@@ -817,16 +876,29 @@ local function draw_fader_back(x, y)
     love.graphics.line(x, y + 24, x + 64, y + 24)
 end
 
-local function draw_button(x, y, color, dot)
-    dot = dot or {130, 130, 130}
-    color = color or {255, 255, 255}
+local function draw_button(x, y, state, color)
+  local edge, fill, blip
 
-    love.graphics.setColor(color[1] * 0.2, color[2] * 0.2, color[3] * 0.2)
-    love.graphics.circle("fill", x, y, 20)
-    love.graphics.setColor(color[1] * 0.8, color[2] * 0.8, color[3] * 0.8)
-    love.graphics.circle("line", x, y, 20)
-    love.graphics.setColor(dot[1], dot[2], dot[3])
-    love.graphics.circle("fill", x, y, 6)
+  if state == "normal" then
+    edge = {255 * 0.8, 255 * 0.8, 255 * 0.8}
+    fill = {255 * 0.2, 255 * 0.2, 255 * 0.2}
+    blip = {130, 130, 130}
+  elseif state == "used" then
+    edge = {255 * 0.8, 255 * 0.8, 255 * 0.8}
+    fill = {255 * 0.2, 255 * 0.2, 255 * 0.2}
+    blip = color
+  elseif state == "pressed" then
+    edge = {color[1] * 0.4, color[2] * 0.4, color[3] * 0.4}
+    fill = {color[1] * 0.95, color[2] * 0.95, color[3] * 0.95}
+    blip = color
+  end
+
+  love.graphics.setColor(fill)
+  love.graphics.circle("fill", x, y, 20)
+  love.graphics.setColor(edge)
+  love.graphics.circle("line", x, y, 20)
+  love.graphics.setColor(blip)
+  love.graphics.circle("fill", x, y, 6)
 end
 
 -- local function draw_held_note(x, y1, y2, position, scale, color, scratches, held)
@@ -1001,9 +1073,16 @@ function state:draw()
     else
         draw_fader_back(lanes[1], y)
         draw_fader_back(lanes[4], y)
-        draw_button(lanes[1] + self.faderAnimLeft  * 64, y, self:isLanePressed(1) and colors[1], self.laneUsed[1] and colors[1])
-        draw_button(lanes[3]                           , y, self:isLanePressed(2) and colors[2], self.laneUsed[2] and colors[2])
-        draw_button(lanes[4] + self.faderAnimRight * 64, y, self:isLanePressed(3) and colors[3], self.laneUsed[3] and colors[3])
+        draw_button(lanes[1] + self.faderAnimLeft  * 64, y, self:isLanePressed(1) and "pressed" or (self.laneUsed[1] and "used" or "normal"), colors[1])
+        draw_button(lanes[3]                           , y, self:isLanePressed(2) and "pressed" or (self.laneUsed[2] and "used" or "normal"), colors[2])
+        draw_button(lanes[4] + self.faderAnimRight * 64, y, self:isLanePressed(3) and "pressed" or (self.laneUsed[3] and "used" or "normal"), colors[3])
+
+        love.graphics.setColor(colors[1][1], colors[1][2], colors[1][3], 255 * self.glowStrength[1])
+        love.graphics.draw(self.glowImage, lanes[1] + self.faderAnimLeft  * 64 - 30, y - 30, 0, 2, 2)
+        love.graphics.setColor(colors[2][1], colors[2][2], colors[2][3], 255 * self.glowStrength[2])
+        love.graphics.draw(self.glowImage, lanes[3]                            - 30, y - 30, 0, 2, 2)
+        love.graphics.setColor(colors[3][1], colors[3][2], colors[3][3], 255 * self.glowStrength[3])
+        love.graphics.draw(self.glowImage, lanes[4] + self.faderAnimRight * 64 - 30, y - 30, 0, 2, 2)
     end
 
     -- Draw lanes
@@ -1111,6 +1190,7 @@ function state:draw()
             local last = offset + note[3]
 
             if last >= 0 then
+            -- if y - last * self:getBeatScale() > height + 16 then
                 local old = false
                 local color = colorsByLane[note[2]]
                 local length = note[3]
@@ -1199,73 +1279,10 @@ function state:draw()
                 love.graphics.circle("fill", x, y1, 16, 32)
                 love.graphics.setColor(tipSecondary)
                 love.graphics.circle("line", x, y1, 16, 32)
-
-                -- if held then
-                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
-                -- elseif not old then
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
-                -- else
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
-                -- end
-
-                -- if held then
-                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
-                -- elseif not old then
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
-                -- else
-                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
-                -- end
-
-                -- if held then
-                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
-                --     local o65 = 0.65 + flash
-                --
-                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
-                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                -- elseif not old then
-                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                -- else
-                --     love.graphics.setColor(60, 60, 60)
-                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(25, 25, 25)
-                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(60, 60, 60)
-                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
-                --     love.graphics.setColor(25, 25, 25)
-                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
-                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
-                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-                -- end
             end
-        elseif not self.noteUsed[note] and offset >= 0 then
+        -- elseif not self.noteUsed[note] and offset >= 0 then
+        -- elseif not self.noteUsed[note] and y - offset * self:getBeatScale() < height + 16 then
+        elseif self.noteUsed[note] ~= 1 and y - offset * self:getBeatScale() < height + 16 then
             local color = colorsByLane[note[2]]
 
             love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
@@ -1296,6 +1313,13 @@ function state:draw()
     -- Draw the combo number
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(util.addSeparators(self.combo), 72 + 8, 72 + 42 + 8 + 8)
+
+    love.graphics.setColor(colors[1])
+    love.graphics.draw(self.particles[1], 0, 0)
+    love.graphics.setColor(colors[2])
+    love.graphics.draw(self.particles[2], 0, 0)
+    love.graphics.setColor(colors[3])
+    love.graphics.draw(self.particles[3], 0, 0)
 
     -- Draw hit effects
     love.graphics.setLineWidth(4)
@@ -1458,14 +1482,32 @@ function state:draw()
     love.graphics.setShader()
 
     -- love.graphics.setColor(255, 255, 255)
-    -- love.graphics.setLineWidth(1)
+    -- -- love.graphics.setLineWidth(1)
+    -- love.graphics.setLineWidth(7)
     --
     -- local y = height / 2
     --
-    -- for i=1, 384 do
-    --     local x = width / 2 - 192 + i + 0.5
-    --     local n = math.floor(self:getFrequencyBucket(220) + i / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
-    --     love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
+    -- -- for i=1, 384, 4 do
+    -- --     -- local x = width / 2 - 192 + i + 0.5
+    -- --     local x = width / 2 - 192 + i + 0.5
+    -- --     local total = 0
+    -- --     for j=0, 3 do
+    -- --       local n = math.floor(self:getFrequencyBucket(220) + (i + j) / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
+    -- --       total = total + self.frequencies[n]
+    -- --     end
+    -- --     -- love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
+    -- --     love.graphics.line(x, 0, x, total / 4 * 2000)
+    -- -- end
+    -- for i=1, 384, 8 do
+    --     -- local x = width / 2 - 192 + i + 0.5
+    --     local x = i + 4 + 0.5
+    --     local total = 0
+    --     for j=0, 7 do
+    --       local n = math.floor(self:getFrequencyBucket(220) + (i + j) / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
+    --       total = total + self.frequencies[n] * (n / 1.5)
+    --     end
+    --     -- love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
+    --     love.graphics.line(x, height, x, height - total / 8 * 50)
     -- end
 
     -- for i = math.floor(self:getFrequencyBucket(220)), math.floor(math.min(self.frequencyCount, self:getFrequencyBucket(22050))) do
