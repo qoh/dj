@@ -221,9 +221,9 @@ function state:mousepressed(x, y, button)
             local index = #self.song.notes
 
             for i, note in ipairs(self.song.notes) do
-                if note[1] == self.mouseBeat then
-                    return
-                end
+                -- if note[1] == self.mouseBeat then
+                --     return
+                -- end
 
                 if note[1] > self.mouseBeat then
                     break
