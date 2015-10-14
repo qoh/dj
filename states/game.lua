@@ -1,7 +1,12 @@
 require "lib.luafft"
 
 local util = require "lib.util"
+local config = require "lib.config"
 local gamestate = require "lib.hump.gamestate"
+
+local pause = require "states.pause"
+local win = require "states.win"
+
 local state = {}
 
 function state:init()
@@ -13,480 +18,480 @@ function state:init()
   self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
 end
 
-function state:enter(previous, filename, song, data, mods, startFromEditor)
+function state:enter(_, filename, song, data, mods, startFromEditor)
   love.mouse.setVisible(false)
 
-    self.mods = mods or {}
+  self.mods = mods or {}
 
-    self.filename = filename
-    self.song = song
+  self.filename = filename
+  self.song = song
 
-    self.stats = {
-        score = 0,
-        totalOffset = 0,
-        noteCount = #song.notes,
-        hitCount = 0,
-        missCount = 0,
-        bestCombo = 0,
-        lostCombo = 0
-    }
+  self.stats = {
+    score = 0,
+    totalOffset = 0,
+    noteCount = #song.notes,
+    hitCount = 0,
+    missCount = 0,
+    bestCombo = 0,
+    lostCombo = 0
+  }
 
-    self.startTimer = 3
-    self.startStart = false
-    self.fade = 0
-    self.combo = 0
-    self.rewind = false
-    self.noteUsed = {}
-    self.scratchUsed = {}
-    self.heldNotes = {}
-    self.fadeUsed = {}
-    self.laneUsed = {
-        [1] = false,
-        [2] = false,
-        [3] = false
-    }
+  self.startTimer = 3
+  self.startStart = false
+  self.fade = 0
+  self.combo = 0
+  self.rewind = false
+  self.noteUsed = {}
+  self.scratchUsed = {}
+  self.heldNotes = {}
+  self.fadeUsed = {}
+  self.laneUsed = {
+    [1] = false,
+    [2] = false,
+    [3] = false
+  }
 
-    self.faderErrorAccum = 0
-    self.faderPointCount = 0
-    self.faderPointTime = 0
-    self.faderAnimLeft  = 1
-    self.faderAnimRight = 0
-    self.messageText = ""
-    self.messageTime = 0
-    self.shakeHit = 0
-    self.shakeMiss = 0
-    self.hitEffects = {}
-    self.laneFillAnim = {
-        [1] = 0,
-        [2] = 0,
-        [3] = 0
-    }
+  self.faderErrorAccum = 0
+  self.faderPointCount = 0
+  self.faderPointTime = 0
+  self.faderAnimLeft  = 1
+  self.faderAnimRight = 0
+  self.messageText = ""
+  self.messageTime = 0
+  self.shakeHit = 0
+  self.shakeMiss = 0
+  self.hitEffects = {}
+  self.laneFillAnim = {
+    [1] = 0,
+    [2] = 0,
+    [3] = 0
+  }
 
-    self.glowStrength = {
-      [1] = 0,
-      [2] = 0,
-      [3] = 0
-    }
+  self.glowStrength = {
+    [1] = 0,
+    [2] = 0,
+    [3] = 0
+  }
 
-    self.audioData = data
-    self.audioSource = love.audio.newSource(self.audioData)
-    self.audioSource:setPitch(self.mods.speed or 1)
-    self.audioSource:play()
+  self.audioData = data
+  self.audioSource = love.audio.newSource(self.audioData)
+  self.audioSource:setPitch(self.mods.speed or 1)
+  self.audioSource:play()
 
-    -- Set up the audio analysis stuff
-    self.frequencies = {}
-    self.frequencyCount = 2048
+  -- Set up the audio analysis stuff
+  self.frequencies = {}
+  self.frequencyCount = 2048
 
-    for i=1, self.frequencyCount do
-        self.frequencies[i] = 0
-    end
+  for i=1, self.frequencyCount do
+    self.frequencies[i] = 0
+  end
 
-    if startFromEditor then
-        self.startFromEditor = true
-        self.startTimer = 0
-        self.audioSource:seek(startFromEditor * (1 / (self.song.bpm / 60)))
-    else
-        self.audioSource:pause()
-    end
+  if startFromEditor then
+    self.startFromEditor = true
+    self.startTimer = 0
+    self.audioSource:seek(startFromEditor * (1 / (self.song.bpm / 60)))
+  else
+    self.audioSource:pause()
+  end
 
-    self.particles = {
-      [1] = love.graphics.newParticleSystem(self.glowImage, 32),
-      [2] = love.graphics.newParticleSystem(self.glowImage, 32),
-      [3] = love.graphics.newParticleSystem(self.glowImage, 32)
-    }
+  self.particles = {
+    [1] = love.graphics.newParticleSystem(self.glowImage, 32),
+    [2] = love.graphics.newParticleSystem(self.glowImage, 32),
+    [3] = love.graphics.newParticleSystem(self.glowImage, 32)
+  }
 
-    for i=1, 3 do
-      self.particles[i]:setLinearAcceleration(0, 100)
-      self.particles[i]:setEmissionRate(0)
-      self.particles[i]:setSizes(0.3)
-      self.particles[i]:setSpread(math.pi / 3)
-      self.particles[i]:setSpeed(50, 70)
-      self.particles[i]:setParticleLifetime(2, 2)
-      self.particles[i]:setDirection(math.pi / 4 + math.pi / 6)
-    end
+  for i=1, 3 do
+    self.particles[i]:setLinearAcceleration(0, 100)
+    self.particles[i]:setEmissionRate(0)
+    self.particles[i]:setSizes(0.3)
+    self.particles[i]:setSpread(math.pi / 3)
+    self.particles[i]:setSpeed(50, 70)
+    self.particles[i]:setParticleLifetime(1, 1)
+    self.particles[i]:setDirection(math.pi / 4)
+  end
 end
 
 function state:leave()
   love.mouse.setVisible(true)
 
-    self.startFromEditor = false
-    self.song = nil
+  self.startFromEditor = false
+  self.song = nil
 
-    self.audioSource:stop()
-    self.audioSource = nil
-    self.audioData = nil
+  self.audioSource:stop()
+  self.audioSource = nil
+  self.audioData = nil
 
-    local joystick = love.joystick:getJoysticks()[1]
-    if joystick then
-        joystick:setVibration()
-    end
+  local joystick = love.joystick:getJoysticks()[1]
+  if joystick then
+    joystick:setVibration()
+  end
 end
 
 function state:pause()
   love.mouse.setVisible(true)
 
-    self.audioSource:pause()
+  self.audioSource:pause()
 
-    local joystick = love.joystick:getJoysticks()[1]
-    if joystick then
-        joystick:setVibration()
-    end
+  local joystick = love.joystick:getJoysticks()[1]
+  if joystick then
+    joystick:setVibration()
+  end
 end
 
 function state:resume()
   love.mouse.setVisible(false)
 
-    if self.startTimer <= 0 then
-        self.audioSource:play()
-    end
+  if self.startTimer <= 0 then
+    self.audioSource:play()
+  end
 end
 
 function state:getBeatScale()
-    return self.song.beatScale or 64
+  return self.song.beatScale or 64
 end
 
 function state:getCurrentPosition()
-    local time = self.audioSource:tell("seconds") - self.startTimer - (self.song.offset or 0)
-    return time / (1 / (self.song.bpm / 60))
+  local time = self.audioSource:tell("seconds") - self.startTimer - (self.song.offset or 0)
+  return time / (1 / (self.song.bpm / 60))
 end
 
 function state:getWindow()
-    return self.song.window or 0.5
+  return self.song.window or 0.5
 end
 
 function state:getMultiplier()
-    return math.min(4, 1 + math.floor(self.combo / 8))
+  return math.min(4, 1 + math.floor(self.combo / 8))
 end
 
 function state:loseCombo()
-    if self.combo == 0 then
-        return
-    end
+  if self.combo == 0 then
+    return
+  end
 
-    self.shakeMiss = math.min(1, self.shakeMiss + self.combo / 8)
-    self.stats.lostCombo = self.stats.lostCombo + 1
-    self.combo = 0
+  self.shakeMiss = math.min(1, self.shakeMiss + self.combo / 8)
+  self.stats.lostCombo = self.stats.lostCombo + 1
+  self.combo = 0
 end
 
 function state:increaseCombo()
-    self.combo = self.combo + 1
-    self.stats.bestCombo = math.max(self.stats.bestCombo, self.combo)
+  self.combo = self.combo + 1
+  self.stats.bestCombo = math.max(self.stats.bestCombo, self.combo)
 
-    if self.combo > 0 and self.combo % 50 == 0 then
-        self.messageTime = 2
-        self.messageText = self.combo .. " note streak!"
-    end
+  if self.combo > 0 and self.combo % 50 == 0 then
+    self.messageTime = 2
+    self.messageText = self.combo .. " note streak!"
+  end
 
-    if self.combo > 0 and self.combo % 60 == 0 and not self.rewind then
-        self.rewind = true
+  if self.combo > 0 and self.combo % 60 == 0 and not self.rewind then
+    self.rewind = true
 
-        self.messageTime = 2
-        self.messageText = "Rewind ready!"
-    end
+    self.messageTime = 2
+    self.messageText = "Rewind ready!"
+  end
 end
 
 function state:noteHit(note, offset)
-    self.shakeHit = math.min(1, self.shakeHit + 0.3)
+  self.shakeHit = math.min(1, self.shakeHit + 0.3)
 
-    self.stats.hitCount = self.stats.hitCount + 1
-    self.stats.totalOffset = self.stats.totalOffset + offset
-    self.stats.score = self.stats.score + 100 * self:getMultiplier()
+  self.stats.hitCount = self.stats.hitCount + 1
+  self.stats.totalOffset = self.stats.totalOffset + offset
+  self.stats.score = self.stats.score + 100 * self:getMultiplier()
 
-    self:increaseCombo()
+  self:increaseCombo()
 
-    if note[2] == 1 or note[2] == 2 then
-        self.laneUsed[1] = true
-        self.glowStrength[1] = 1
-        self.particles[1]:emit(4)
-    elseif note[2] == 4 or note[2] == 5 then
-        self.laneUsed[3] = true
-        self.glowStrength[3] = 1
-        self.particles[3]:emit(4)
-    elseif note[2] == 3 then
-        self.laneUsed[2] = true
-        self.glowStrength[2] = 1
-        self.particles[2]:emit(4)
-    end
+  if note[2] == 1 or note[2] == 2 then
+    self.laneUsed[1] = true
+    self.glowStrength[1] = 1
+    self.particles[1]:emit(4)
+  elseif note[2] == 4 or note[2] == 5 then
+    self.laneUsed[3] = true
+    self.glowStrength[3] = 1
+    self.particles[3]:emit(4)
+  elseif note[2] == 3 then
+    self.laneUsed[2] = true
+    self.glowStrength[2] = 1
+    self.particles[2]:emit(4)
+  end
 
-    table.insert(self.hitEffects, {0, note[2]})
+  table.insert(self.hitEffects, {0, note[2]})
 end
 
 function state:noteMiss(note)
-    self:loseCombo()
-    self.stats.missCount = self.stats.missCount + 1
+  self:loseCombo()
+  self.stats.missCount = self.stats.missCount + 1
 
-    if note[2] == 1 or note[2] == 2 then
-        self.laneUsed[1] = false
-    elseif note[2] == 4 or note[2] == 5 then
-        self.laneUsed[3] = false
-    elseif note[2] == 3 then
-        self.laneUsed[2] = false
-    end
+  if note[2] == 1 or note[2] == 2 then
+    self.laneUsed[1] = false
+  elseif note[2] == 4 or note[2] == 5 then
+    self.laneUsed[3] = false
+  elseif note[2] == 3 then
+    self.laneUsed[2] = false
+  end
 end
 
-function state:fadeHit(fade, offset)
-    self.shakeHit = math.min(1, self.shakeHit + 0.12)
+function state:fadeHit() -- fade, offset
+  self.shakeHit = math.min(1, self.shakeHit + 0.12)
 
-    -- self.stats.hitCount = self.stats.hitCount + 1
-    -- self.stats.totalOffset = self.stats.totalOffset + offset
-    self.stats.score = self.stats.score + 100 * self:getMultiplier()
+  -- self.stats.hitCount = self.stats.hitCount + 1
+  -- self.stats.totalOffset = self.stats.totalOffset + offset
+  self.stats.score = self.stats.score + 100 * self:getMultiplier()
 
-    self:increaseCombo()
+  self:increaseCombo()
 end
 
 function state:setFade(offset)
-    if self.song.mode == "5key" then
-        return
+  if self.song.mode == "5key" then
+    return
+  end
+
+  self.fade = math.max(-1, math.min(1, offset))
+  local position = self:getCurrentPosition()
+
+  for _, fade in ipairs(self.song.lanes) do
+    local offset = fade[1] - position
+
+    if offset > self:getWindow() then
+      break
     end
 
-    self.fade = math.max(-1, math.min(1, offset))
-    local position = self:getCurrentPosition()
-
-    for i, fade in ipairs(self.song.lanes) do
-        local offset = fade[1] - position
-
-        if offset > self:getWindow() then
-            break
-        end
-
-        if offset > -self:getWindow() and fade[2] == self.fade and not self.fadeUsed[fade] then
-            self.fadeUsed[fade] = true
-            self:fadeHit(fade, offset)
-            return
-        end
+    if offset > -self:getWindow() and fade[2] == self.fade and not self.fadeUsed[fade] then
+      self.fadeUsed[fade] = true
+      self:fadeHit(fade, offset)
+      return
     end
+  end
 
-    local noteAccessible = {
-        offset == -1,
-        offset ~= -1,
-        true,
-        offset ~= 1,
-        offset == 1
-    }
+  local noteAccessible = {
+    offset == -1,
+    offset ~= -1,
+    true,
+    offset ~= 1,
+    offset == 1
+  }
 
-    local i = 1
+  local i = 1
 
-    while i <= #self.heldNotes do
-        if not noteAccessible[self.heldNotes[i][1][2]] then
-            table.remove(self.heldNotes, i)
-        else
-            i = i + 1
-        end
+  while i <= #self.heldNotes do
+    if not noteAccessible[self.heldNotes[i][1][2]] then
+      table.remove(self.heldNotes, i)
+    else
+      i = i + 1
     end
+  end
 end
 
 function state:lanePressed(lane)
-    local position = self:getCurrentPosition()
+  local position = self:getCurrentPosition()
 
-    for i, note in ipairs(self.song.notes) do
-        local offset = note[1] - position
+  for _, note in ipairs(self.song.notes) do
+    local offset = note[1] - position
 
-        if offset > self:getWindow() then
-            break
-        end
-
-        if note[2] == lane and not self.noteUsed[note] then
-            self.noteUsed[note] = 1
-            self:noteHit(note, offset)
-
-            if note[3] then
-                table.insert(self.heldNotes, {note, 0, 0})
-            end
-
-            return
-        end
+    if offset > self:getWindow() then
+      break
     end
 
-    self:loseCombo()
+    if note[2] == lane and not self.noteUsed[note] then
+      self.noteUsed[note] = true
+      self:noteHit(note, offset)
 
-    if lane == 1 or lane == 2 then
-        self.laneUsed[1] = false
-    elseif lane == 4 or lane == 5 then
-        self.laneUsed[3] = false
-    elseif lane == 3 then
-        self.laneUsed[2] = false
+      if note[3] then
+        table.insert(self.heldNotes, {note, 0, 0})
+      end
+
+      return
     end
+  end
+
+  self:loseCombo()
+
+  if lane == 1 or lane == 2 then
+    self.laneUsed[1] = false
+  elseif lane == 4 or lane == 5 then
+    self.laneUsed[3] = false
+  elseif lane == 3 then
+    self.laneUsed[2] = false
+  end
 end
 
 function state:laneReleased(lane)
-    for i, note in ipairs(self.heldNotes) do
-        if note[1][2] == lane then
-            table.remove(self.heldNotes, i)
-            break
-        end
+  for i, note in ipairs(self.heldNotes) do
+    if note[1][2] == lane then
+      table.remove(self.heldNotes, i)
+      break
     end
+  end
 end
 
-function state:activateEuphoria()
+function state.activateEuphoria()
 end
 
 function state:escape()
-    if self.startFromEditor then
-        gamestate.pop()
-    else
-        gamestate.push(states.pause)
-    end
+  if self.startFromEditor then
+    gamestate.pop()
+  else
+    gamestate.push(pause)
+  end
 end
 
-function state:keypressed(key, unicode)
-    if key == "escape" then
-        self:escape()
-    elseif key == "kpenter" or key == "application" then
-        self:activateEuphoria()
-    elseif self.song.mode == "5key" then
-        if key == "a" then
-            self:lanePressed(1)
-        elseif key == "s" then
-            self:lanePressed(2)
-        elseif key == "d" then
-            self:lanePressed(3)
-        elseif key == "f" then
-            self:lanePressed(4)
-        elseif key == "g" then
-            self:lanePressed(5)
-        end
-    else
-        if key == "kp1" or key == "," then
-            self:lanePressed(self.fade == -1 and 1 or 2)
-        elseif key == "kp2" or key == "." then
-            self:lanePressed(3)
-        elseif key == "kp3" or key == "/" then
-            self:lanePressed(self.fade == 1 and 5 or 4)
-        elseif key == "kp4" then
-            self:laneScratched(self.fade == -1 and 1 or 2, -1)
-        end
+function state:keypressed(key)
+  if key == "escape" then
+    self:escape()
+  elseif key == "kpenter" or key == "application" then
+    self:activateEuphoria()
+  elseif self.song.mode == "5key" then
+    if key == "a" then
+      self:lanePressed(1)
+    elseif key == "s" then
+      self:lanePressed(2)
+    elseif key == "d" then
+      self:lanePressed(3)
+    elseif key == "f" then
+      self:lanePressed(4)
+    elseif key == "g" then
+      self:lanePressed(5)
     end
+  else
+    if key == "kp1" or key == "," then
+      self:lanePressed(self.fade == -1 and 1 or 2)
+    elseif key == "kp2" or key == "." then
+      self:lanePressed(3)
+    elseif key == "kp3" or key == "/" then
+      self:lanePressed(self.fade == 1 and 5 or 4)
+    elseif key == "kp4" then
+      self:laneScratched(self.fade == -1 and 1 or 2, -1)
+    end
+  end
 end
 
 -- -1 iz up, 0 iz random, 1 iz down
 function state:laneScratched(lane, dir)
-    local position = self:getCurrentPosition()
-    print(lane)
+  local position = self:getCurrentPosition()
+  -- print(lane)
 
-    for i, note in ipairs(self.song.notes) do
-        if position < note[1] then
-            break
-        end
-
-        if note[3] and note[4] and note[2] == lane and position < note[1] + note[3] then
-        -- if note[3] and note[4] and note[2] == lane then
-            for i, scratch in ipairs(note[4]) do
-                local d = position - note[1] - scratch[1]
-
-                if not self.scratchUsed[scratch] and (scratch[2] == dir or scratch[2] == 0) and math.abs(d) < 0.5 then
-                    self.scratchUsed[scratch] = note
-                    self:noteHit(note, d)
-                end
-            end
-
-            break
-        end
+  for _, note in ipairs(self.song.notes) do
+    if position < note[1] then
+      break
     end
+
+    if note[3] and note[4] and note[2] == lane and position < note[1] + note[3] then
+    -- if note[3] and note[4] and note[2] == lane then
+      for _, scratch in ipairs(note[4]) do
+        local d = position - note[1] - scratch[1]
+
+        if not self.scratchUsed[scratch] and (scratch[2] == dir or scratch[2] == 0) and math.abs(d) < 0.5 then
+          self.scratchUsed[scratch] = note
+          self:noteHit(note, d)
+        end
+      end
+
+      break
+    end
+  end
 end
 
-function state:keyreleased(key, unicode)
-    if self.song.mode == "5key" then
-        if key == "a" then
-            self:laneReleased(1)
-        elseif key == "s" then
-            self:laneReleased(2)
-        elseif key == "d" then
-            self:laneReleased(3)
-        elseif key == "f" then
-            self:laneReleased(4)
-        elseif key == "g" then
-            self:laneReleased(5)
-        end
-    else
-        if key == "kp1" or key == "," then
-            self:laneReleased(self.fade == -1 and 1 or 2)
-        elseif key == "kp2" or key == "." then
-            self:laneReleased(3)
-        elseif key == "kp3" or key == "/" then
-            self:laneReleased(self.fade == 1 and 5 or 4)
-        elseif key == "kp4" then
-            self:laneScratched(self.fade == -1 and 1 or 2, 1)
-        end
+function state:keyreleased(key)
+  if self.song.mode == "5key" then
+    if key == "a" then
+      self:laneReleased(1)
+    elseif key == "s" then
+      self:laneReleased(2)
+    elseif key == "d" then
+      self:laneReleased(3)
+    elseif key == "f" then
+      self:laneReleased(4)
+    elseif key == "g" then
+      self:laneReleased(5)
     end
+  else
+    if key == "kp1" or key == "," then
+      self:laneReleased(self.fade == -1 and 1 or 2)
+    elseif key == "kp2" or key == "." then
+      self:laneReleased(3)
+    elseif key == "kp3" or key == "/" then
+      self:laneReleased(self.fade == 1 and 5 or 4)
+    elseif key == "kp4" then
+      self:laneScratched(self.fade == -1 and 1 or 2, 1)
+    end
+  end
 end
 
-function state:gamepadpressed(joystick, key)
-    if key == "start" then
-        self:escape()
-    elseif key == "x" then
-        self:lanePressed(self.fade == -1 and 1 or 2)
-    elseif key == "a" then
-        self:lanePressed(3)
-    elseif key == "b" then
-        self:lanePressed(self.fade == 1 and 5 or 4)
-    elseif key == "y" then
-        self:lanePressed(self.fade == -1 and 1 or 2)
-        self:lanePressed(self.fade == 1 and 5 or 4)
-    elseif key == "leftshoulder" then
-        self:lanePressed(self.fade == -1 and 1 or 2)
-        self:lanePressed(3)
-    elseif key == "rightshoulder" then
-        self:lanePressed(3)
-        self:lanePressed(self.fade == 1 and 5 or 4)
-    elseif key == "back" then
-        self:activateEuphoria()
-    end
+function state:gamepadpressed(_, key)
+  if key == "start" then
+    self:escape()
+  elseif key == "x" then
+    self:lanePressed(self.fade == -1 and 1 or 2)
+  elseif key == "a" then
+    self:lanePressed(3)
+  elseif key == "b" then
+    self:lanePressed(self.fade == 1 and 5 or 4)
+  elseif key == "y" then
+    self:lanePressed(self.fade == -1 and 1 or 2)
+    self:lanePressed(self.fade == 1 and 5 or 4)
+  elseif key == "leftshoulder" then
+    self:lanePressed(self.fade == -1 and 1 or 2)
+    self:lanePressed(3)
+  elseif key == "rightshoulder" then
+    self:lanePressed(3)
+    self:lanePressed(self.fade == 1 and 5 or 4)
+  elseif key == "back" then
+    self:activateEuphoria()
+  end
 end
 
-function state:gamepadreleased(joystick, key)
-    if key == "x" then
-        self:laneReleased(self.fade == -1 and 1 or 2)
-    elseif key == "a" then
-        self:laneReleased(3)
-    elseif key == "b" then
-        self:laneReleased(self.fade == 1 and 5 or 4)
-    elseif key == "y" then
-        self:laneReleased(self.fade == -1 and 1 or 2)
-        self:laneReleased(self.fade == 1 and 5 or 4)
-    elseif key == "leftshoulder" then
-        self:laneReleased(self.fade == -1 and 1 or 2)
-        self:laneReleased(3)
-    elseif key == "rightshoulder" then
-        self:laneReleased(3)
-        self:laneReleased(self.fade == 1 and 5 or 4)
-    end
+function state:gamepadreleased(_, key)
+  if key == "x" then
+    self:laneReleased(self.fade == -1 and 1 or 2)
+  elseif key == "a" then
+    self:laneReleased(3)
+  elseif key == "b" then
+    self:laneReleased(self.fade == 1 and 5 or 4)
+  elseif key == "y" then
+    self:laneReleased(self.fade == -1 and 1 or 2)
+    self:laneReleased(self.fade == 1 and 5 or 4)
+  elseif key == "leftshoulder" then
+    self:laneReleased(self.fade == -1 and 1 or 2)
+    self:laneReleased(3)
+  elseif key == "rightshoulder" then
+    self:laneReleased(3)
+    self:laneReleased(self.fade == 1 and 5 or 4)
+  end
 end
 
 function state:isLanePressed(lane)
-    if self.song.mode == "5key" then
-        if lane == 1 then
-            return love.keyboard.isDown("a")
-        elseif lane == 2 then
-            return love.keyboard.isDown("s")
-        elseif lane == 3 then
-            return love.keyboard.isDown("d")
-        elseif lane == 4 then
-            return love.keyboard.isDown("f")
-        elseif lane == 5 then
-            return love.keyboard.isDown("g")
-        end
-    end
-
-    local joystick = love.joystick.getJoysticks()[1]
-
-    if settings.ignoreGamepad then
-        joystick = nil
-    end
-
+  if self.song.mode == "5key" then
     if lane == 1 then
-        return love.keyboard.isDown("kp1") or (joystick and joystick:isGamepadDown("x"))
+      return love.keyboard.isDown("a")
     elseif lane == 2 then
-        return love.keyboard.isDown("kp2") or (joystick and joystick:isGamepadDown("a"))
+      return love.keyboard.isDown("s")
     elseif lane == 3 then
-        return love.keyboard.isDown("kp3") or (joystick and joystick:isGamepadDown("b"))
+      return love.keyboard.isDown("d")
+    elseif lane == 4 then
+      return love.keyboard.isDown("f")
+    elseif lane == 5 then
+      return love.keyboard.isDown("g")
     end
+  end
+
+  local joystick = love.joystick.getJoysticks()[1]
+
+  if config.ignoreGamepad then
+    joystick = nil
+  end
+
+  if lane == 1 then
+    return love.keyboard.isDown("kp1") or (joystick and joystick:isGamepadDown("x"))
+  elseif lane == 2 then
+    return love.keyboard.isDown("kp2") or (joystick and joystick:isGamepadDown("a"))
+  elseif lane == 3 then
+    return love.keyboard.isDown("kp3") or (joystick and joystick:isGamepadDown("b"))
+  end
 end
 
-local complex = require "lib.complex"
-require "lib.luafft"
+-- local complex = require "lib.complex"
+-- require "lib.luafft"
 
 function state:getFrequencyBucket(freq)
-    return freq * self.frequencyCount / 44100 + 1
+  return freq * self.frequencyCount / 44100 + 1
 end
 
 function state:update(dt)
@@ -494,7 +499,7 @@ function state:update(dt)
         if self.startFromEditor then
             gamestate.pop()
         else
-            gamestate.switch(states.win, self.filename, self.song, self.stats)
+            gamestate.switch(win, self.filename, self.song, self.stats)
         end
 
         return
@@ -571,9 +576,9 @@ function state:update(dt)
     -- Handle proper fading
     if self.song.mode ~= "5key" then
         local fade = 0
-        local time = 0
+        -- local time = 0
 
-        for i, entry in ipairs(self.song.lanes) do
+        for _, entry in ipairs(self.song.lanes) do
             if entry[1] < position then
                 fade = entry[2]
             end
@@ -620,7 +625,7 @@ function state:update(dt)
 
     local joystick = love.joystick:getJoysticks()[1]
 
-    if settings.ignoreGamepad then
+    if config.ignoreGamepad then
         joystick = nil
     end
 
@@ -751,11 +756,11 @@ function state:update(dt)
                     local newNoteUsed = {}
                     local position = self:getCurrentPosition()
 
-                    for note, value in pairs(self.noteUsed) do
+                    for note in pairs(self.noteUsed) do
                         local offset = note[1] - position
 
                         if offset < 0 then
-                            newNoteUsed[note] = value
+                            newNoteUsed[note] = true
                         end
                     end
 
@@ -825,15 +830,6 @@ function state:update(dt)
 
             while item[3] >= 0.1 do
                 self.stats.score = self.stats.score + 5 * self:getMultiplier()
-                local rawr = item[1][2]
-                if rawr == 1 or rawr == 2 then
-                  rawr = 1
-                elseif rawr == 4 or rawr == 5 then
-                  rawr = 3
-                else
-                  rawr = 2
-                end
-                self.particles[rawr]:emit(1)
                 item[3] = item[3] - 0.1
             end
 
@@ -843,7 +839,7 @@ function state:update(dt)
 
     -- Check for missed notes
     if started and not spinning then
-        for i, note in ipairs(self.song.notes) do
+        for _, note in ipairs(self.song.notes) do
             local offset = note[1] - position
 
             if offset >= -self:getWindow() then
@@ -851,7 +847,7 @@ function state:update(dt)
             end
 
             if not self.noteUsed[note] then
-                self.noteUsed[note] = 0
+                self.noteUsed[note] = true
                 self:noteMiss(note)
             end
         end
@@ -863,31 +859,31 @@ function state:update(dt)
 end
 
 local function draw_fader_back(x, y)
-    love.graphics.setColor( 50,  50,  50)
-    love.graphics.circle("fill", x,      y, 24)
-    love.graphics.circle("fill", x + 64, y, 24)
-    love.graphics.setColor(150, 150, 150)
-    love.graphics.circle("line", x,      y, 24)
-    love.graphics.circle("line", x + 64, y, 24)
-    love.graphics.setColor( 50,  50,  50)
-    love.graphics.rectangle("fill", x, y - 24, 64, 48)
-    love.graphics.setColor(150, 150, 150)
-    love.graphics.line(x, y - 24, x + 64, y - 24)
-    love.graphics.line(x, y + 24, x + 64, y + 24)
+  love.graphics.setColor( 50,  50,  50)
+  love.graphics.circle("fill", x,      y, 24)
+  love.graphics.circle("fill", x + 64, y, 24)
+  love.graphics.setColor(150, 150, 150)
+  love.graphics.circle("line", x,      y, 24)
+  love.graphics.circle("line", x + 64, y, 24)
+  love.graphics.setColor( 50,  50,  50)
+  love.graphics.rectangle("fill", x, y - 24, 64, 48)
+  love.graphics.setColor(150, 150, 150)
+  love.graphics.line(x, y - 24, x + 64, y - 24)
+  love.graphics.line(x, y + 24, x + 64, y + 24)
 end
 
-local function draw_button(x, y, state, color)
+local function draw_button(x, y, buttonstate, color)
   local edge, fill, blip
 
-  if state == "normal" then
+  if buttonstate == "normal" then
     edge = {255 * 0.8, 255 * 0.8, 255 * 0.8}
     fill = {255 * 0.2, 255 * 0.2, 255 * 0.2}
     blip = {130, 130, 130}
-  elseif state == "used" then
+  elseif buttonstate == "used" then
     edge = {255 * 0.8, 255 * 0.8, 255 * 0.8}
     fill = {255 * 0.2, 255 * 0.2, 255 * 0.2}
     blip = color
-  elseif state == "pressed" then
+  elseif buttonstate == "pressed" then
     edge = {color[1] * 0.4, color[2] * 0.4, color[3] * 0.4}
     fill = {color[1] * 0.95, color[2] * 0.95, color[3] * 0.95}
     blip = color
@@ -1179,7 +1175,7 @@ function state:draw()
     love.graphics.setLineWidth(2)
 
     -- Draw notes
-    for i, note in ipairs(self.song.notes) do
+    for _, note in ipairs(self.song.notes) do
         local offset = note[1] - position
 
         if y - offset * self:getBeatScale() < -16 then
@@ -1190,7 +1186,6 @@ function state:draw()
             local last = offset + note[3]
 
             if last >= 0 then
-            -- if y - last * self:getBeatScale() > height + 16 then
                 local old = false
                 local color = colorsByLane[note[2]]
                 local length = note[3]
@@ -1204,7 +1199,7 @@ function state:draw()
                 -- This is very inefficient
                 local held
 
-                for i, each in ipairs(self.heldNotes) do
+                for _, each in ipairs(self.heldNotes) do
                     if each[1] == note then
                         held = each
                         break
@@ -1252,7 +1247,7 @@ function state:draw()
                     love.graphics.setColor(255, 255, 255)
                     love.graphics.setLineWidth(4)
 
-                    for i, scratch in ipairs(note[4]) do
+                    for _, scratch in ipairs(note[4]) do
                         local p = note[1] + scratch[1]
 
                         if p > position then
@@ -1279,10 +1274,73 @@ function state:draw()
                 love.graphics.circle("fill", x, y1, 16, 32)
                 love.graphics.setColor(tipSecondary)
                 love.graphics.circle("line", x, y1, 16, 32)
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
+                -- elseif not old then
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
+                -- else
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
+                -- end
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], flash)
+                -- elseif not old then
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4])
+                -- else
+                --     draw_held_note(lanes[note[2]], y - offset * scale, y - last * scale, scale, color, note[4], nil, true)
+                -- end
+
+                -- if held then
+                --     local flash = 0.3 * math.sin(held[2] * math.pi * 5)
+                --     local o65 = 0.65 + flash
+                --
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * o65, color[2] * o65, color[3] * o65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- elseif not old then
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- else
+                --     love.graphics.setColor(60, 60, 60)
+                --     love.graphics.circle("fill", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(25, 25, 25)
+                --     love.graphics.circle("line", lanes[note[2]], y - last * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(60, 60, 60)
+                --     love.graphics.rectangle("fill", lanes[note[2]] - 16, y - last * self:getBeatScale(), 32, length * self:getBeatScale())
+                --     love.graphics.setColor(25, 25, 25)
+                --     love.graphics.line(lanes[note[2]] - 16, y - last * self:getBeatScale(), lanes[note[2]] - 16, y - offset * self:getBeatScale())
+                --     love.graphics.line(lanes[note[2]] + 16, y - last * self:getBeatScale(), lanes[note[2]] + 16, y - offset * self:getBeatScale())
+                --     love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+                --     love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                --     love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+                --     love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+                -- end
             end
-        -- elseif not self.noteUsed[note] and offset >= 0 then
-        -- elseif not self.noteUsed[note] and y - offset * self:getBeatScale() < height + 16 then
-        elseif self.noteUsed[note] ~= 1 and y - offset * self:getBeatScale() < height + 16 then
+        elseif not self.noteUsed[note] and offset >= 0 then
             local color = colorsByLane[note[2]]
 
             love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
@@ -1324,7 +1382,7 @@ function state:draw()
     -- Draw hit effects
     love.graphics.setLineWidth(4)
 
-    for i, effect in ipairs(self.hitEffects) do
+    for _, effect in ipairs(self.hitEffects) do
         local color = colorsByLane[effect[2]]
         local radius = 16 + 12 * effect[1]
         love.graphics.setColor(color[1], color[2], color[3], 255 * (1 - effect[1]))
@@ -1360,7 +1418,7 @@ function state:draw()
         local t_a
         local t_b
 
-        for i, entry in ipairs(self.song.subtitles) do
+        for _, entry in ipairs(self.song.subtitles) do
             if position < entry[1] then
                 break
             end
@@ -1390,20 +1448,20 @@ function state:draw()
     end
 
     -- Draw input overlay
-    if settings.showInput then
+    if config.showInput then
         local joystick = love.joystick.getJoysticks()[1]
 
-        if settings.ignoreGamepad then
+        if config.ignoreGamepad then
             joystick = nil
         end
 
         if joystick then
-            local function button(x, y, label, state)
+            local function button(x, y, label, ispressed)
                 love.graphics.setFont(self.messageFont)
                 love.graphics.setColor(150, 150, 150)
                 love.graphics.setLineWidth(2)
 
-                if state then
+                if ispressed then
                     love.graphics.circle("fill", x + 16, y + 16, 16, 32)
                     love.graphics.setColor(255, 255, 255)
                 end
@@ -1450,12 +1508,12 @@ function state:draw()
             button(width - 32 - 32 - 8 - 32, 48 - 32, "Y", joystick:isGamepadDown("y"))
             button(width - 32 - 32 - 8, 48, "B", joystick:isGamepadDown("b"))
         else
-            local function button(x, y, label, state)
+            local function button(x, y, label, ispressed)
                 love.graphics.setFont(self.messageFont)
                 love.graphics.setColor(150, 150, 150)
                 love.graphics.setLineWidth(2)
 
-                if state then
+                if ispressed then
                     love.graphics.rectangle("fill", x, y, 32, 32)
                     love.graphics.setColor(255, 255, 255)
                 end
@@ -1481,34 +1539,34 @@ function state:draw()
 
     love.graphics.setShader()
 
-    -- love.graphics.setColor(255, 255, 255)
-    -- -- love.graphics.setLineWidth(1)
-    -- love.graphics.setLineWidth(7)
-    --
+    love.graphics.setColor(255, 255, 255)
+    -- love.graphics.setLineWidth(1)
+    love.graphics.setLineWidth(7)
+
     -- local y = height / 2
-    --
-    -- -- for i=1, 384, 4 do
-    -- --     -- local x = width / 2 - 192 + i + 0.5
-    -- --     local x = width / 2 - 192 + i + 0.5
-    -- --     local total = 0
-    -- --     for j=0, 3 do
-    -- --       local n = math.floor(self:getFrequencyBucket(220) + (i + j) / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
-    -- --       total = total + self.frequencies[n]
-    -- --     end
-    -- --     -- love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
-    -- --     love.graphics.line(x, 0, x, total / 4 * 2000)
-    -- -- end
-    -- for i=1, 384, 8 do
+
+    -- for i=1, 384, 4 do
     --     -- local x = width / 2 - 192 + i + 0.5
-    --     local x = i + 4 + 0.5
+    --     local x = width / 2 - 192 + i + 0.5
     --     local total = 0
-    --     for j=0, 7 do
+    --     for j=0, 3 do
     --       local n = math.floor(self:getFrequencyBucket(220) + (i + j) / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
-    --       total = total + self.frequencies[n] * (n / 1.5)
+    --       total = total + self.frequencies[n]
     --     end
     --     -- love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
-    --     love.graphics.line(x, height, x, height - total / 8 * 50)
+    --     love.graphics.line(x, 0, x, total / 4 * 2000)
     -- end
+    for i=1, 384, 8 do
+        -- local x = width / 2 - 192 + i + 0.5
+        local x = i + 4 + 0.5
+        local total = 0
+        for j=0, 7 do
+          local n = math.floor(self:getFrequencyBucket(220) + (i + j) / 384 * (self:getFrequencyBucket(11025) - self:getFrequencyBucket(220)))
+          total = total + self.frequencies[n] * (n / 1.5)
+        end
+        -- love.graphics.line(x, 0, x, self.frequencies[n] * 2000)
+        love.graphics.line(x, height, x, height - total / 8 * 50)
+    end
 
     -- for i = math.floor(self:getFrequencyBucket(220)), math.floor(math.min(self.frequencyCount, self:getFrequencyBucket(22050))) do
     --     local x = width / 2 - 192 + (i - math.floor(self:getFrequencyBucket(220))) + 0.5

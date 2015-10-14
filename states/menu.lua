@@ -1,10 +1,13 @@
 local util = require "lib.util"
 local gamestate = require "lib.hump.gamestate"
+
+local songselect = require "states.songselect"
+local game = require "states.game"
+local editor = require "states.editor"
+
 local state = {}
 
 function state:init()
-    local scale = love.window.getPixelScale()
-
     self.headerFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", love.window.toPixels(36))
     self.itemFont = love.graphics.newFont("assets/fonts/Montserrat-Regular.ttf", love.window.toPixels(24))
 
@@ -29,22 +32,6 @@ function state:init()
     self.vignette = love.graphics.newImage("assets/vignette.png")
 
     local mods = {speed = 1.0}
-
-    -- self.items = {
-    --     {"Play", function()
-    --         states.songselect:run(function(filename, song, data)
-    --         	gamestate.switch(states.game, filename, song, data, mods)
-    --         end)
-    --     end},
-    --     {"Edit a track", function()
-    --         states.songselect:run(function(filename, song, data)
-    --         	gamestate.switch(states.editor, filename, song, data, mods)
-    --         end)
-    --     end},
-    --     {"Help & controls", function() gamestate.switch(states.help) end},
-    --     {"Settings", function() gamestate.switch(states.settings) end},
-    --     {"Exit", love.event.quit}
-    -- }
 
     self.screenProps = {
         exit = {
@@ -73,8 +60,8 @@ function state:init()
                 text = "Play a song",
                 keyfocus = true,
                 activate = function()
-                    states.songselect:run(function(filename, song, data)
-                    	gamestate.switch(states.game, filename, song, data, mods)
+                    songselect:run(function(filename, song, data)
+                    	gamestate.switch(game, filename, song, data, mods)
                     end)
                 end,
                 pos = function(w, h) return w / 14, h / 2 end
@@ -83,8 +70,8 @@ function state:init()
                 text = "Open editor",
                 keyfocus = true,
                 activate = function()
-                    states.songselect:run(function(filename, song, data)
-                    	gamestate.switch(states.editor, filename, song, data, mods)
+                    songselect:run(function(filename, song, data)
+                    	gamestate.switch(editor, filename, song, data, mods)
                     end)
                 end,
                 pos = function(w, h) return w / 14, h / 2 + 40 end
@@ -221,7 +208,7 @@ end
 
 function state:activate(prompt)
     if self.controlScheme ~= "mouse" then
-        for i, control in ipairs(self.screen) do
+        for _, control in ipairs(self.screen) do
             if control.prompt == prompt then
                 self.sounds.click:clone():play()
 
@@ -262,7 +249,7 @@ function state:prev(quiet)
     end
 end
 
-function state:gamepadpressed(joystick, key)
+function state:gamepadpressed(_, key)
     self:setControlScheme("xbox360")
 
     if key == "a" then
@@ -278,7 +265,7 @@ function state:gamepadpressed(joystick, key)
     end
 end
 
-function state:keypressed(key, isrepeat)
+function state:keypressed(key)
     self:setControlScheme("keyboard")
 
     if key == "return" then
@@ -346,7 +333,7 @@ end
 --     self:select(i)
 -- end
 
-function state:mousepressed(x, y, button)
+function state:mousepressed(x, y)
     self:setControlScheme("mouse")
     self:setFocus(self:findMouseFocus(love.window.fromPixels(x, y)))
 end
@@ -360,7 +347,7 @@ function state:mousereleased(x, y, button)
     end
 end
 
-function state:mousemoved(x, y, dx, dy)
+function state:mousemoved(x, y)
     self:setControlScheme("mouse")
     self:setFocus(self:findMouseFocus(love.window.fromPixels(x, y)))
 end
@@ -473,11 +460,11 @@ function state:update(dt)
         end
     end
 
-    local h = (math.sin(math.sin(love.timer.getTime() * 0.04) * math.pi) + 1) / 2
-    local s = 0.3
-    local v = 0.2 + (math.sin(love.timer.getTime() * 0.1) + 1) / 2 * 0.1
+    local ch = (math.sin(math.sin(love.timer.getTime() * 0.04) * math.pi) + 1) / 2
+    local cs = 0.3
+    local cv = 0.2 + (math.sin(love.timer.getTime() * 0.1) + 1) / 2 * 0.1
 
-    love.graphics.setBackgroundColor(util.hsvToRgb(h, s, v))
+    love.graphics.setBackgroundColor(util.hsvToRgb(ch, cs, cv))
 end
 
 function state:draw()
@@ -487,12 +474,12 @@ function state:draw()
 
     love.graphics.setLineWidth(love.window.toPixels(3 * strength))
 
-    for i, entry in ipairs(self.waste) do
+    for _, entry in ipairs(self.waste) do
         love.graphics.setColor(entry.color[1], entry.color[2], entry.color[3], entry.life * 255)
         love.graphics.line(entry.path)
     end
 
-    for i, entry in ipairs(self.worms) do
+    for _, entry in ipairs(self.worms) do
         love.graphics.setColor(entry.color)
         love.graphics.line(entry.path)
     end
@@ -525,7 +512,7 @@ function state:draw()
         end
 
         if prompts[control.prompt] then
-            local size = 32
+            -- local size = 32
             local scale = love.window.toPixels(40) / 100
 
             love.graphics.setColor(255, 255, 255)

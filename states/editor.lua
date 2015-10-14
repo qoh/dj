@@ -3,95 +3,96 @@ local ser = require "lib.ser"
 
 local gamestate = require "lib.hump.gamestate"
 
+local prompt = require "states.prompt"
+local game = require "states.game"
+
 local state = {}
 
 function state:init()
-    self.markerFont = love.graphics.newFont(12)
-    self.timeFont = love.graphics.newFont("assets/fonts/Roboto-Light.ttf", 14)
-    self.warningFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 16)
-    self.hitSound = love.audio.newSource("assets/Laser_Shoot12.wav")
-    self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
+  self.markerFont = love.graphics.newFont(12)
+  self.timeFont = love.graphics.newFont("assets/fonts/Roboto-Light.ttf", 14)
+  self.warningFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 16)
+  self.hitSound = love.audio.newSource("assets/Laser_Shoot12.wav")
+  self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
 end
 
-function state:enter(previous, filename, song, data, mods)
-    self.filename = filename
-    -- self.song = love.filesystem.load(filename)()
-    self.song = song
-    self.mods = mods or {}
+function state:enter(_, filename, song, data, mods)
+  self.filename = filename
+  self.song = song
+  self.mods = mods or {}
 
-    -- self.audioData = love.sound.newSoundData("songs/" .. self.song.audio)
-    self.audioData = data
-    self.audioSource = love.audio.newSource(self.audioData)
+  self.audioData = data
+  self.audioSource = love.audio.newSource(self.audioData)
 
-    self.audioSource:play()
-    self.audioSource:pause()
+  self.audioSource:play()
+  self.audioSource:pause()
 
-    self.lastPosition = 0
-    self.unsaved = false
+  self.lastPosition = 0
+  self.unsaved = false
 
-    self.mouseLane = nil
-    self.mouseBeat = nil
+  self.mouseLane = nil
+  self.mouseBeat = nil
 
-    love.keyboard.setKeyRepeat(true)
+  love.keyboard.setKeyRepeat(true)
 end
 
 function state:leave()
-    self.audioSource:stop()
-    self.audioSource = nil
-    self.audioData = nil
-    self.song = nil
+  self.audioSource:stop()
+  self.audioSource = nil
+  self.audioData = nil
+  self.song = nil
 
-    love.keyboard.setKeyRepeat(false)
+  love.keyboard.setKeyRepeat(false)
 end
 
 function state:pause()
-    love.keyboard.setKeyRepeat(false)
-    self.audioSource:pause()
+  love.keyboard.setKeyRepeat(false)
+  self.audioSource:pause()
 end
 
 function state:close()
-    if self.unsaved then
-        gamestate.push(states.prompt, "You have unsaved changes. Are you sure you want to discard them and exit the editor?", gamestate.pop)
-    else
-        gamestate.pop()
-    end
+  if self.unsaved then
+    gamestate.push(prompt, "You have unsaved changes. Are you sure you want to discard them and exit the editor?", gamestate.pop)
+  else
+    gamestate.pop()
+  end
 end
 
 function state:getPosition()
-    local time = self.audioSource:tell("seconds") - (self.song.offset or 0)
-    return time / (1 / (self.song.bpm / 60))
+  local time = self.audioSource:tell("seconds") - (self.song.offset or 0)
+  return time / (1 / (self.song.bpm / 60))
 end
 
 function state:seek(beats)
-    local target = (self:getPosition() + beats) * (1 / (self.song.bpm / 60))
-    local limit = self.audioData:getDuration("seconds")
+  local target = (self:getPosition() + beats) * (1 / (self.song.bpm / 60))
+  local limit = self.audioData:getDuration("seconds")
 
-    self.audioSource:seek(math.max(0, math.min(limit, target)))
-    self.lastPosition = self:getPosition()
+  self.audioSource:seek(math.max(0, math.min(limit, target)))
+  self.lastPosition = self:getPosition()
 end
 
 local BEAT_SCALE = 64
 
 function state:getSelectedNote(limit)
-    limit = limit or 0.25
-    local index, selected, record
+  limit = limit or 0.25
+  local index, selected, record
 
-    for i, note in ipairs(self.song.notes) do
-        if note[2] == self.mouseLane then
-            local distance = math.abs(note[1] - self.mouseBeatSoft)
+  for i, note in ipairs(self.song.notes) do
+    if note[2] == self.mouseLane then
+      local distance = math.abs(note[1] - self.mouseBeatSoft)
 
-            if distance <= limit and (not record or distance < record) then
-                index = i
-                selected = note
-                record = distance
-            end
-        end
+      if distance <= limit and (not record or distance < record) then
+        index = i
+        selected = note
+        record = distance
+      end
     end
+  end
 
-    return index, selected, record
+  return index, selected, record
 end
 
-function state:keypressed(key, unicode)
+function state:keypressed(key)
     if key == "escape" then
         self:close()
     elseif key == " " then
@@ -141,7 +142,7 @@ function state:keypressed(key, unicode)
             self.unsaved = false
             print("Saved!")
         elseif key == "p" then
-            gamestate.push(states.game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
+            gamestate.push(game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
         end
     elseif key == "w" then
         self:changeScratchStuff(-1)
@@ -150,9 +151,9 @@ function state:keypressed(key, unicode)
     elseif key == "x" then
         self:changeScratchStuff(1)
     elseif key == "a" then
-        for i, note in ipairs(self.song.notes) do
+        for _, note in ipairs(self.song.notes) do
             if self.mouseLane == note[2] and note[3] and note[4] and note[1] <= self.mouseBeat and note[1] + note[3] >= self.mouseBeat then
-                local index = #note[4]
+                -- local index = #note[4]
                 local offset = self.mouseBeat - note[1]
 
                 for i, scratch in ipairs(note[4]) do
@@ -179,7 +180,7 @@ function state:keypressed(key, unicode)
 end
 
 function state:changeScratchStuff(direction)
-    for i, note in ipairs(self.song.notes) do
+    for _, note in ipairs(self.song.notes) do
         if note[2] == self.mouseLane and note[3] and note[1] <= self.mouseBeat and note[1] + note[3] >= self.mouseBeat then
             if not note[4] then
                 note[4] = {}
@@ -214,41 +215,41 @@ function state:changeScratchStuff(direction)
     end
 end
 
-function state:mousepressed(x, y, button)
-    if button == 1 then
-        if self.mouseLane then
-            -- Find the right position
-            local index = #self.song.notes
+function state:mousepressed(_, _, button)
+  if button == 1 then
+    if self.mouseLane then
+        -- Find the right position
+        local index = #self.song.notes
 
-            for i, note in ipairs(self.song.notes) do
-                -- if note[1] == self.mouseBeat then
-                --     return
-                -- end
+        for i, note in ipairs(self.song.notes) do
+          -- if note[1] == self.mouseBeat then
+          --     return
+          -- end
 
-                if note[1] > self.mouseBeat then
-                    break
-                end
+          if note[1] > self.mouseBeat then
+            break
+          end
 
-                index = i
-            end
-
-            table.insert(self.song.notes, index, {self.mouseBeat, self.mouseLane})
-            self.unsaved = true
+          index = i
         end
-    elseif button == 2 then
-        local index = self:getSelectedNote()
 
-        if index then
-            table.remove(self.song.notes, index)
-            self.unsaved = true
-        end
+        table.insert(self.song.notes, index, {self.mouseBeat, self.mouseLane})
+        self.unsaved = true
     end
+  elseif button == 2 then
+    local index = self:getSelectedNote()
+
+    if index then
+      table.remove(self.song.notes, index)
+      self.unsaved = true
+    end
+  end
 end
 
-function state:wheelmoved(x, y)
+function state:wheelmoved(_, y)
     if y > 0 then
         if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
-            local index, note = self:getSelectedNote()
+            local _, note = self:getSelectedNote()
 
             if note and note[3] then
                 if note[3] == 0 then
@@ -264,7 +265,7 @@ function state:wheelmoved(x, y)
         end
     elseif y < 0 then
         if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
-            local index, note = self:getSelectedNote()
+            local _, note = self:getSelectedNote()
 
             if note then
                 if not note[3] then
@@ -281,7 +282,7 @@ function state:wheelmoved(x, y)
     end
 end
 
-function state:update(dt)
+function state:update()
     if self.audioSource:isStopped() then
         self.audioSource:play()
         self.audioSource:pause()
@@ -310,7 +311,7 @@ function state:update(dt)
     self.lastPosition = b
 
     -- Play note hit sounds
-    for i, note in ipairs(self.song.notes) do
+    for _, note in ipairs(self.song.notes) do
         if a <= note[1] and b > note[1] then
             self.hitSound:clone():play()
             break
@@ -321,7 +322,7 @@ function state:update(dt)
         -- Play lane switch sounds
         local last = 0
 
-        for i, lane in ipairs(self.song.lanes) do
+        for _, lane in ipairs(self.song.lanes) do
             if lane[2] ~= last and a <= lane[1] and b > lane[1] then
                 self.fadeSound:clone():play()
                 break
@@ -372,22 +373,22 @@ function state:update(dt)
         end
 
         local i_prev, l_prev
-        local i_next, l_next
+        -- local i_next, l_next
         local i_self, l_self
 
-        for i, lane in ipairs(self.song.lanes) do
-            if lane[1] > self.mouseBeat then
-                i_next = i
-                l_next = lane
+        for i, cur_lane in ipairs(self.song.lanes) do
+            if cur_lane[1] > self.mouseBeat then
+                -- i_next = i
+                -- l_next = lane
                 break
             end
 
-            if lane[1] == self.mouseBeat then
+            if cur_lane[1] == self.mouseBeat then
                 i_self = i
-                l_self = lane
+                l_self = cur_lane
             else
                 i_prev = i
-                l_prev = lane
+                l_prev = cur_lane
             end
         end
 
@@ -417,29 +418,29 @@ function state:update(dt)
 end
 
 local function draw_fader_back(x, y)
-    love.graphics.setColor( 50,  50,  50)
-    love.graphics.circle("fill", x,      y, 24)
-    love.graphics.circle("fill", x + 64, y, 24)
-    love.graphics.setColor(150, 150, 150)
-    love.graphics.circle("line", x,      y, 24)
-    love.graphics.circle("line", x + 64, y, 24)
-    love.graphics.setColor( 50,  50,  50)
-    love.graphics.rectangle("fill", x, y - 24, 64, 48)
-    love.graphics.setColor(150, 150, 150)
-    love.graphics.line(x, y - 24, x + 64, y - 24)
-    love.graphics.line(x, y + 24, x + 64, y + 24)
+  love.graphics.setColor( 50,  50,  50)
+  love.graphics.circle("fill", x,      y, 24)
+  love.graphics.circle("fill", x + 64, y, 24)
+  love.graphics.setColor(150, 150, 150)
+  love.graphics.circle("line", x,      y, 24)
+  love.graphics.circle("line", x + 64, y, 24)
+  love.graphics.setColor( 50,  50,  50)
+  love.graphics.rectangle("fill", x, y - 24, 64, 48)
+  love.graphics.setColor(150, 150, 150)
+  love.graphics.line(x, y - 24, x + 64, y - 24)
+  love.graphics.line(x, y + 24, x + 64, y + 24)
 end
 
 local function draw_button(x, y, color, dot)
-    dot = dot or {130, 130, 130}
-    color = color or {255, 255, 255}
+  dot = dot or {130, 130, 130}
+  color = color or {255, 255, 255}
 
-    love.graphics.setColor(color[1] * 0.2, color[2] * 0.2, color[3] * 0.2)
-    love.graphics.circle("fill", x, y, 20)
-    love.graphics.setColor(color[1] * 0.8, color[2] * 0.8, color[3] * 0.8)
-    love.graphics.circle("line", x, y, 20)
-    love.graphics.setColor(dot[1], dot[2], dot[3])
-    love.graphics.circle("fill", x, y, 6)
+  love.graphics.setColor(color[1] * 0.2, color[2] * 0.2, color[3] * 0.2)
+  love.graphics.circle("fill", x, y, 20)
+  love.graphics.setColor(color[1] * 0.8, color[2] * 0.8, color[3] * 0.8)
+  love.graphics.circle("line", x, y, 20)
+  love.graphics.setColor(dot[1], dot[2], dot[3])
+  love.graphics.circle("fill", x, y, 6)
 end
 
 function state:draw()
@@ -450,37 +451,37 @@ function state:draw()
     local y = height - 64
 
     local lanes = {
-        [1] = x - 128,
-        [2] = x - 64,
-        [3] = x,
-        [4] = x + 64,
-        [5] = x + 128
+      [1] = x - 128,
+      [2] = x - 64,
+      [3] = x,
+      [4] = x + 64,
+      [5] = x + 128
     }
 
     local colors = {
-        [1] = {127, 255,  50},
-        [2] = {255,  50,  50},
-        [3] = {  0, 127, 255},
+      [1] = {127, 255,  50},
+      [2] = {255,  50,  50},
+      [3] = {  0, 127, 255},
     }
 
     local colorsByLane
 
     if self.song.mode == "5key" then
-        colorsByLane = {
-            [1] = {255, 255,  50},
-            [2] = {255, 100, 200},
-            [3] = {127, 255,  50},
-            [4] = {255, 127,  50},
-            [5] = { 50, 200, 255}
-        }
+      colorsByLane = {
+        [1] = {255, 255,  50},
+        [2] = {255, 100, 200},
+        [3] = {127, 255,  50},
+        [4] = {255, 127,  50},
+        [5] = { 50, 200, 255}
+      }
     else
-        colorsByLane = {
-            [1] = colors[1],
-            [2] = colors[1],
-            [3] = colors[2],
-            [4] = colors[3],
-            [5] = colors[3]
-        }
+      colorsByLane = {
+        [1] = colors[1],
+        [2] = colors[1],
+        [3] = colors[2],
+        [4] = colors[3],
+        [5] = colors[3]
+      }
     end
 
     -- Draw scratchboard
@@ -498,31 +499,31 @@ function state:draw()
     love.graphics.translate(0, -64 * (1 - (position - math.floor(position))))
 
     for i=0, height / 64 do
-        love.graphics.line(beatX1, height - i * 64, beatX2, height - i * 64)
+      love.graphics.line(beatX1, height - i * 64, beatX2, height - i * 64)
     end
 
     love.graphics.pop()
 
     -- Lane helpers
     for i=1, 5 do
-        love.graphics.line(lanes[i], 0, lanes[i], y)
+      love.graphics.line(lanes[i], 0, lanes[i], y)
     end
 
     -- Draw controls for fading and notes
     love.graphics.setLineWidth(2)
 
     if self.song.mode == "5key" then
-        draw_button(lanes[1], y, colorsByLane[1], colorsByLane[1])
-        draw_button(lanes[2], y, colorsByLane[2], colorsByLane[2])
-        draw_button(lanes[3], y, colorsByLane[3], colorsByLane[3])
-        draw_button(lanes[4], y, colorsByLane[4], colorsByLane[4])
-        draw_button(lanes[5], y, colorsByLane[5], colorsByLane[5])
+      draw_button(lanes[1], y, colorsByLane[1], colorsByLane[1])
+      draw_button(lanes[2], y, colorsByLane[2], colorsByLane[2])
+      draw_button(lanes[3], y, colorsByLane[3], colorsByLane[3])
+      draw_button(lanes[4], y, colorsByLane[4], colorsByLane[4])
+      draw_button(lanes[5], y, colorsByLane[5], colorsByLane[5])
     else
-        draw_fader_back(lanes[1], y)
-        draw_fader_back(lanes[4], y)
-        --draw_button(lanes[1] + 64, y, nil, colors[1])
-        draw_button(lanes[3]     , y, nil, colors[2])
-        --draw_button(lanes[4] +  0, y, nil, colors[3])
+      draw_fader_back(lanes[1], y)
+      draw_fader_back(lanes[4], y)
+      --draw_button(lanes[1] + 64, y, nil, colors[1])
+      draw_button(lanes[3]     , y, nil, colors[2])
+      --draw_button(lanes[4] +  0, y, nil, colors[3])
     end
 
     if self.song.mode ~= "5key" then
@@ -530,11 +531,11 @@ function state:draw()
         local last_beat
         local last_fade = 0
 
-        for i, lane in ipairs(self.song.lanes) do
+        for _, lane in ipairs(self.song.lanes) do
             local offset = lane[1] - position
 
             if offset >= 0 and lane[2] ~= last_fade then
-                if lane[1] == last then
+                if lane[1] == last_beat then
                     love.graphics.setColor(255, 0, 0)
                     love.graphics.setLineWidth(4)
                 else
@@ -616,7 +617,7 @@ function state:draw()
     end
 
     -- Draw notes
-    for i, note in ipairs(self.song.notes) do
+    for _, note in ipairs(self.song.notes) do
         local offset = note[1] - position
 
         if note[3] then
@@ -627,8 +628,8 @@ function state:draw()
                 local length = note[3]
 
                 if offset < 0 then
-                    length = length + offset
-                    offset = 0
+                  length = length + offset
+                  offset = 0
                 end
 
                 love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
@@ -651,7 +652,7 @@ function state:draw()
                     love.graphics.setColor(255, 255, 255)
                     love.graphics.setLineWidth(4)
 
-                    for i, scratch in ipairs(note[4]) do
+                    for _, scratch in ipairs(note[4]) do
                         local p = note[1] + scratch[1]
 
                         if p > position then
@@ -674,24 +675,24 @@ function state:draw()
                 end
             end
         elseif offset >= 0 then
-            local color = colorsByLane[note[2]]
+          local color = colorsByLane[note[2]]
 
-            love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-            love.graphics.circle("fill", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
-            love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-            love.graphics.circle("line", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+          love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
+          love.graphics.circle("fill", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
+          love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
+          love.graphics.circle("line", lanes[note[2]], y - offset * BEAT_SCALE, 16, 32)
         end
     end
 
     -- Draw temporary note
     if self.mouseLane then
-        local color = colorsByLane[self.mouseLane]
-        local offset = self.mouseBeat - position
+      local color = colorsByLane[self.mouseLane]
+      local offset = self.mouseBeat - position
 
-        love.graphics.setColor(color[1], color[2], color[3], 127 + 48 * math.sin(love.timer.getTime() * 5))
-        love.graphics.circle("fill", lanes[self.mouseLane], y - offset * BEAT_SCALE, 8, 16)
-        love.graphics.setColor(255, 255, 255)
-        love.graphics.print(self.mouseBeat, lanes[self.mouseLane], y - offset * BEAT_SCALE)
+      love.graphics.setColor(color[1], color[2], color[3], 127 + 48 * math.sin(love.timer.getTime() * 5))
+      love.graphics.circle("fill", lanes[self.mouseLane], y - offset * BEAT_SCALE, 8, 16)
+      love.graphics.setColor(255, 255, 255)
+      love.graphics.print(self.mouseBeat, lanes[self.mouseLane], y - offset * BEAT_SCALE)
     end
 
     local bw = width
@@ -713,11 +714,11 @@ function state:draw()
     -- This is probably a bad idea.
     love.graphics.setLineWidth(1)
 
-    for i, note in ipairs(self.song.notes) do
-        local position = note[1] * (1 / (self.song.bpm / 60))
-        position = bx + bw * position / duration
-        love.graphics.setColor(colorsByLane[note[2]])
-        love.graphics.line(position, by + 0.5, position, by + bh - 1)
+    for _, note in ipairs(self.song.notes) do
+      local position = note[1] * (1 / (self.song.bpm / 60))
+      position = bx + bw * position / duration
+      love.graphics.setColor(colorsByLane[note[2]])
+      love.graphics.line(position, by + 0.5, position, by + bh - 1)
     end
 
     local scaled = math.floor(bw * progress)
@@ -731,21 +732,21 @@ function state:draw()
     local size = love.graphics.getFont():getWidth(text)
     love.graphics.print(text, math.min(width - 2, math.max(2, scaled - size)), by - 18)
 
-    if scaled > 2 then
-        -- love.graphics.setStencil(function()
-        --     love.graphics.rectangle("fill", bx, by, scaled, bh)
-        -- end)
-        --
-        -- love.graphics.setColor(40, 40, 40)
-        -- love.graphics.printf(util.secondsToTime(math.floor(position)), bx, by + 1, scaled - 2, "right")
-        --
-        -- love.graphics.setStencil()
-    end
+    -- if scaled > 2 then
+    --   love.graphics.setStencil(function()
+    --       love.graphics.rectangle("fill", bx, by, scaled, bh)
+    --   end)
+    --
+    --   love.graphics.setColor(40, 40, 40)
+    --   love.graphics.printf(util.secondsToTime(math.floor(position)), bx, by + 1, scaled - 2, "right")
+    --
+    --   love.graphics.setStencil()
+    -- end
 
     if self.unsaved then
-        love.graphics.setFont(self.warningFont)
-        love.graphics.setColor(200, 100, 30)
-        love.graphics.printf("Unsaved", 0, 8, width - 8, "right")
+      love.graphics.setFont(self.warningFont)
+      love.graphics.setColor(200, 100, 30)
+      love.graphics.printf("Unsaved", 0, 8, width - 8, "right")
     end
 
     love.graphics.setFont(self.warningFont)
