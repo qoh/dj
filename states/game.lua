@@ -1402,11 +1402,11 @@ function state:draw()
         local fade = math.min(1, self.startTimer)
 
         love.graphics.setColor(0, 0, 0, 50 * fade)
-        love.graphics.rectangle("fill", 128, height / 3 - 24 - 8, width - 256, 56)
+        love.graphics.rectangle("fill", 128, height / 3 - 24 - 8, width - 256, 72) -- 56
 
         love.graphics.setColor(255, 255, 255, 255 * fade)
         love.graphics.setFont(self.messageFont)
-        love.graphics.printf(self.song.author .. " - " .. self.song.title, 128, height / 3 - 24, width - 256, "center")
+        love.graphics.printf(self.song.author .. " - " .. self.song.title .. "\n" .. self.song.difficulty, 128, height / 3 - 24, width - 256, "center")
     end
 
     -- Draw subtitles
