@@ -709,7 +709,8 @@ function state:update(dt)
         end
 
         if config.vibration then
-          joystick:setVibration(self.shakeMiss * 0.5, self.shakeHit)
+          joystick:setVibration(self.shakeMiss * 0.5 * config.vibrationStrength,
+            self.shakeHit * config.vibrationStrength)
         end
     else
         local fade = 0

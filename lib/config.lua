@@ -10,6 +10,7 @@ local config = {
   gamepad = true,
   particles = true,
   vibration = true,
+  vibrationStrength = 1,
   showInput = false
 }
 
