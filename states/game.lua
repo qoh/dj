@@ -474,7 +474,7 @@ function state:isLanePressed(lane)
 
   local joystick = love.joystick.getJoysticks()[1]
 
-  if config.ignoreGamepad then
+  if not config.gamepad then
     joystick = nil
   end
 
@@ -625,7 +625,7 @@ function state:update(dt)
 
     local joystick = love.joystick:getJoysticks()[1]
 
-    if config.ignoreGamepad then
+    if not config.gamepad then
         joystick = nil
     end
 
@@ -1457,7 +1457,7 @@ function state:draw()
     if config.showInput then
         local joystick = love.joystick.getJoysticks()[1]
 
-        if config.ignoreGamepad then
+        if not config.gamepad then
             joystick = nil
         end
 
@@ -1495,13 +1495,15 @@ function state:draw()
             local st = math.atan2(sy, sx)
 
             if sd > 0.2 then
-                love.graphics.setInvertedStencil(function()
+                love.graphics.stencil(function()
                     love.graphics.circle("fill", sdx, sdy, 32 * sd - 8, 64 * sd - 16)
                 end)
 
+                love.graphics.setStencilTest(true, true)
+
                 love.graphics.setColor(200, 200, 200)
                 love.graphics.arc("fill", sdx, sdy, 32 * sd, st - math.pi / 4, st + math.pi / 4, 32 * sd * 2)
-                love.graphics.setStencil()
+                love.graphics.setStencilTest(false)
             end
 
             love.graphics.setColor(150, 150, 150)

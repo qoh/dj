@@ -154,7 +154,7 @@ function state:update(dt)
 
   local joystick = love.joystick.getJoysticks()[1]
 
-  if not config.ignoreGamepad and joystick then
+  if config.gamepad and joystick then
     local value = joystick:getGamepadAxis("lefty")
     local speed = 1 - (math.abs(value) - 0.25) / 0.75 + 0.05
 

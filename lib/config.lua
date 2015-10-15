@@ -7,7 +7,9 @@ local config = {
   fullscreen = false,
   vsync = true,
   msaa = 8,
-  ignoreGamepad = false,
+  gamepad = true,
+  particles = true,
+  vibration = true,
   showInput = false
 }
 
