@@ -31,7 +31,7 @@ function state:init()
 
     self.vignette = love.graphics.newImage("assets/vignette.png")
 
-    local mods = {speed = 1.0, ghost = true}
+    local mods = {speed = 1.0, ghost = false}
 
     self.screenProps = {
         exit = {

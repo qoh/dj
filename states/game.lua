@@ -420,20 +420,11 @@ end
 function state:gamepadpressed(_, key)
   if key == "start" then
     self:escape()
-  elseif key == "x" then
+  elseif key == "x" or key == "leftshoulder" then
     self:lanePressed(self.fade == -1 and 1 or 2)
-  elseif key == "a" then
+  elseif key == "a" or key == "y" then
     self:lanePressed(3)
-  elseif key == "b" then
-    self:lanePressed(self.fade == 1 and 5 or 4)
-  elseif key == "y" then
-    self:lanePressed(self.fade == -1 and 1 or 2)
-    self:lanePressed(self.fade == 1 and 5 or 4)
-  elseif key == "leftshoulder" then
-    self:lanePressed(self.fade == -1 and 1 or 2)
-    self:lanePressed(3)
-  elseif key == "rightshoulder" then
-    self:lanePressed(3)
+  elseif key == "b" or key == "rightshoulder" then
     self:lanePressed(self.fade == 1 and 5 or 4)
   elseif key == "back" then
     self:activateEuphoria()
@@ -441,20 +432,11 @@ function state:gamepadpressed(_, key)
 end
 
 function state:gamepadreleased(_, key)
-  if key == "x" then
+  if key == "x" or key == "leftshoulder" then
     self:laneReleased(self.fade == -1 and 1 or 2)
-  elseif key == "a" then
+  elseif key == "a" or key == "y" then
     self:laneReleased(3)
-  elseif key == "b" then
-    self:laneReleased(self.fade == 1 and 5 or 4)
-  elseif key == "y" then
-    self:laneReleased(self.fade == -1 and 1 or 2)
-    self:laneReleased(self.fade == 1 and 5 or 4)
-  elseif key == "leftshoulder" then
-    self:laneReleased(self.fade == -1 and 1 or 2)
-    self:laneReleased(3)
-  elseif key == "rightshoulder" then
-    self:laneReleased(3)
+  elseif key == "b" or key == "rightshoulder" then
     self:laneReleased(self.fade == 1 and 5 or 4)
   end
 end
@@ -481,11 +463,11 @@ function state:isLanePressed(lane)
   end
 
   if lane == 1 then
-    return love.keyboard.isDown("kp1") or (joystick and joystick:isGamepadDown("x"))
+    return love.keyboard.isDown("kp1") or (joystick and (joystick:isGamepadDown("x") or joystick:isGamepadDown("leftshoulder")))
   elseif lane == 2 then
-    return love.keyboard.isDown("kp2") or (joystick and joystick:isGamepadDown("a"))
+    return love.keyboard.isDown("kp2") or (joystick and (joystick:isGamepadDown("a") or joystick:isGamepadDown("y")))
   elseif lane == 3 then
-    return love.keyboard.isDown("kp3") or (joystick and joystick:isGamepadDown("b"))
+    return love.keyboard.isDown("kp3") or (joystick and (joystick:isGamepadDown("b") or joystick:isGamepadDown("rightshoulder")))
   end
 end
 
