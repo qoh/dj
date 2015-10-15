@@ -129,8 +129,10 @@ function state:keypressed(key)
 end
 
 function state:textinput(text)
-  self.editvalue = self.editvalue:sub(1, self.cursorpos) .. text .. self.editvalue:sub(self.cursorpos + 1)
-  self.cursorpos = self.cursorpos + #text
+  if self.editstate and self.fields[self.index].type == "string" then
+    self.editvalue = self.editvalue:sub(1, self.cursorpos) .. text .. self.editvalue:sub(self.cursorpos + 1)
+    self.cursorpos = self.cursorpos + #text
+  end
 end
 
 function state:draw()
