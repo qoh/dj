@@ -751,10 +751,6 @@ function state:draw()
       love.graphics.setColor(200, 100, 30)
       love.graphics.printf("Unsaved", 0, 8, width - 8, "right")
     end
-
-    love.graphics.setFont(self.warningFont)
-    love.graphics.setColor(200, 100, 30)
-    love.graphics.print(love.mouse.getX() .. " " .. love.mouse.getY(), 64, 64)
 end
 
 return state
