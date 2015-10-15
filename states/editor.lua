@@ -95,7 +95,7 @@ end
 function state:keypressed(key)
     if key == "escape" then
         self:close()
-    elseif key == " " then
+    elseif key == "space" then
         if self.audioSource:isPlaying() then
             self.audioSource:pause()
         else
@@ -247,7 +247,7 @@ function state:mousepressed(_, _, button)
 end
 
 function state:wheelmoved(_, y)
-    if y > 0 then
+    if y < 0 then
         if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
             local _, note = self:getSelectedNote()
 
@@ -263,7 +263,7 @@ function state:wheelmoved(_, y)
         else
             self:seek(1)
         end
-    elseif y < 0 then
+    elseif y > 0 then
         if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
             local _, note = self:getSelectedNote()
 
