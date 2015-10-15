@@ -3,6 +3,7 @@ local ser = require "lib.ser"
 
 local gamestate = require "lib.hump.gamestate"
 
+local editor_meta = require "states.editor-meta"
 local prompt = require "states.prompt"
 local game = require "states.game"
 
@@ -142,7 +143,9 @@ function state:keypressed(key)
             self.unsaved = false
             print("Saved!")
         elseif key == "p" then
-            gamestate.push(game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
+          gamestate.push(game, self.filename, self.song, self.audioData, self.mods, self:getPosition())
+        elseif key == "m" then
+          gamestate.push(editor_meta, self.song)
         end
     elseif key == "w" then
         self:changeScratchStuff(-1)
