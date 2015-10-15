@@ -94,20 +94,22 @@ function state:enter(_, filename, song, data, mods, startFromEditor)
     self.audioSource:pause()
   end
 
-  self.particles = {
-    [1] = love.graphics.newParticleSystem(self.glowImage, 32),
-    [2] = love.graphics.newParticleSystem(self.glowImage, 32),
-    [3] = love.graphics.newParticleSystem(self.glowImage, 32)
-  }
+  if config.particles then
+    self.particles = {
+      [1] = love.graphics.newParticleSystem(self.glowImage, 32),
+      [2] = love.graphics.newParticleSystem(self.glowImage, 32),
+      [3] = love.graphics.newParticleSystem(self.glowImage, 32)
+    }
 
-  for i=1, 3 do
-    self.particles[i]:setLinearAcceleration(0, 100)
-    self.particles[i]:setEmissionRate(0)
-    self.particles[i]:setSizes(0.3)
-    self.particles[i]:setSpread(math.pi / 3)
-    self.particles[i]:setSpeed(50, 70)
-    self.particles[i]:setParticleLifetime(1, 1)
-    self.particles[i]:setDirection(math.pi / 4)
+    for i=1, 3 do
+      self.particles[i]:setLinearAcceleration(0, 100)
+      self.particles[i]:setEmissionRate(0)
+      self.particles[i]:setSizes(0.3)
+      self.particles[i]:setSpread(math.pi / 3)
+      self.particles[i]:setSpeed(50, 70)
+      self.particles[i]:setParticleLifetime(1, 1)
+      self.particles[i]:setDirection(math.pi / 4)
+    end
   end
 end
 
@@ -202,15 +204,15 @@ function state:noteHit(note, offset)
   if note[2] == 1 or note[2] == 2 then
     self.laneUsed[1] = true
     self.glowStrength[1] = 1
-    self.particles[1]:emit(4)
+    if config.particles then self.particles[1]:emit(4) end
   elseif note[2] == 4 or note[2] == 5 then
     self.laneUsed[3] = true
     self.glowStrength[3] = 1
-    self.particles[3]:emit(4)
+    if config.particles then self.particles[3]:emit(4) end
   elseif note[2] == 3 then
     self.laneUsed[2] = true
     self.glowStrength[2] = 1
-    self.particles[2]:emit(4)
+    if config.particles then self.particles[2]:emit(4) end
   end
 
   table.insert(self.hitEffects, {0, note[2]})
@@ -556,9 +558,11 @@ function state:update(dt)
         [5] = x + 128
     }
 
-    self.particles[1]:setPosition(lanes[1] + self.faderAnimLeft  * 64, y)
-    self.particles[2]:setPosition(lanes[3]                           , y)
-    self.particles[3]:setPosition(lanes[4] + self.faderAnimRight * 64, y)
+    if config.particles then
+      self.particles[1]:setPosition(lanes[1] + self.faderAnimLeft  * 64, y)
+      self.particles[2]:setPosition(lanes[3]                           , y)
+      self.particles[3]:setPosition(lanes[4] + self.faderAnimRight * 64, y)
+    end
 
     for i=1, 3 do
         if self.laneUsed[i] then
@@ -568,7 +572,7 @@ function state:update(dt)
         end
 
         self.glowStrength[i] = math.max(0, self.glowStrength[i] - dt * 2)
-        self.particles[i]:update(dt)
+        if config.particles then self.particles[i]:update(dt) end
     end
 
     local position = self:getCurrentPosition()
@@ -704,7 +708,9 @@ function state:update(dt)
             self:setFade(fade)
         end
 
-        joystick:setVibration(self.shakeMiss * 0.5, self.shakeHit)
+        if config.vibration then
+          joystick:setVibration(self.shakeMiss * 0.5, self.shakeHit)
+        end
     else
         local fade = 0
 
@@ -1378,12 +1384,14 @@ function state:draw()
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(util.addSeparators(self.combo), 72 + 8, 72 + 42 + 8 + 8)
 
-    love.graphics.setColor(colors[1])
-    love.graphics.draw(self.particles[1], 0, 0)
-    love.graphics.setColor(colors[2])
-    love.graphics.draw(self.particles[2], 0, 0)
-    love.graphics.setColor(colors[3])
-    love.graphics.draw(self.particles[3], 0, 0)
+    if config.particles then
+      love.graphics.setColor(colors[1])
+      love.graphics.draw(self.particles[1], 0, 0)
+      love.graphics.setColor(colors[2])
+      love.graphics.draw(self.particles[2], 0, 0)
+      love.graphics.setColor(colors[3])
+      love.graphics.draw(self.particles[3], 0, 0)
+    end
 
     -- Draw hit effects
     love.graphics.setLineWidth(4)
