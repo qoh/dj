@@ -1341,12 +1341,18 @@ function state:draw()
                 -- end
             end
         elseif not self.noteUsed[note] and offset >= 0 then
-            local color = colorsByLane[note[2]]
+          local alpha = 255
 
-            love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65)
-            love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
-            love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10)
-            love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+          if self.mods.ghost and offset < 2 then
+            alpha = math.max(0, (offset - 1) * 255)
+          end
+
+          local color = colorsByLane[note[2]]
+
+          love.graphics.setColor(color[1] * 0.65, color[2] * 0.65, color[3] * 0.65, alpha)
+          love.graphics.circle("fill", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
+          love.graphics.setColor(color[1] * 0.10, color[2] * 0.10, color[3] * 0.10, alpha)
+          love.graphics.circle("line", lanes[note[2]], y - offset * self:getBeatScale(), 16, 32)
         end
     end
 
