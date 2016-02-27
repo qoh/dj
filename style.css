@@ -13,7 +13,7 @@ body {
   margin: 32px auto;
 }
 
-a {
+p a {
   color: #48c;
   text-decoration: none;
   background: #bef;
@@ -22,7 +22,7 @@ a {
   transition: .3s background, .3s color;
 }
 
-a:focus, a:hover {
+p a:focus, p a:hover {
   background: #fff;
   color: #8cf;
 }
@@ -39,23 +39,48 @@ code {
   color: #a33;
 }
 
+.media {
+  display: flex;
+}
+
+.media a {
+  margin: 4px;
+  flex: 1 1 auto;
+}
+
+.media img {
+  max-width: 100%;
+}
+
 .downloads {
   list-style-type: none;
   padding: 0;
 }
 
 .downloads li {
-  margin: 16px;
-  border-left: 4px solid #137;
+  margin: 8px;
+  padding: 8px;
+  border-left: 4px solid #369;
   padding-left: 12px;
+  transition: .3s background, .3s border;
+}
+
+.downloads li:hover {
+  background: #bef;
+  border-left: 4px solid #137;
 }
 
 .downloads li>a {
-  background: transparent;
-  padding: 0;
+  text-decoration: none;
+  color: #678; /* ❤ */
 }
 
 .download-header {
   font-weight: bold;
   color: #369;
+  transition: .3s color;
+}
+
+.downloads li:hover .download-header {
+  color: #6af;
 }
