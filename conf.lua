@@ -13,6 +13,6 @@ function love.conf(t)
   t.window.minheight = 480
   t.window.fullscreen = config.fullscreen
   t.window.vsync = config.vsync
-  t.window.fsaa = config.fsaa
+  t.window.msaa = config.msaa
   t.window.highdpi = true
 end
