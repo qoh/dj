@@ -89,7 +89,7 @@ function state:enter(_, filename, song, data, mods, startFromEditor)
   if startFromEditor then
     self.startFromEditor = true
     self.startTimer = 0
-    self.audioSource:seek(startFromEditor * (1 / (self.song.bpm / 60)))
+    self.audioSource:seek(math.max(startFromEditor * (1 / (self.song.bpm / 60)), 0))
   else
     self.audioSource:pause()
   end
