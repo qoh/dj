@@ -99,7 +99,7 @@ function state:draw()
     love.graphics.circle("fill", cx, cy, love.window.toPixels(radius * 0.8, radius * 1.6))
   end)
 
-  love.graphics.setStencilTest(true, true)
+  love.graphics.setStencilTest("equal", 0)
 
   -- Draw empty part
   love.graphics.setColor(32, 32, 32, self.fade * 200)
@@ -112,7 +112,7 @@ function state:draw()
   love.graphics.setColor(150, 150, 150, self.fade * 255)
   love.graphics.arc("fill", cx, cy, radius, a1, a2, radius * 2)
 
-  love.graphics.setStencilTest(false)
+  love.graphics.setStencilTest()
 end
 
 return state
