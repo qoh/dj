@@ -82,6 +82,9 @@ function state:enter(_, filename, song, data, mods, startFromEditor)
     local videoname = util.filepath(filename) .. song.video
     self.video = love.graphics.newVideo(videoname, false)
     self.video:play()
+  elseif self.video then
+    print("failed to deinit game.video!")
+    self.video = nil
   end
 
   -- Set up the audio analysis stuff
