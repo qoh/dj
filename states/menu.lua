@@ -49,7 +49,7 @@ function state:init()
             }
         },
         main = {
-            title = "Placeholder",
+            title = "Beats Me",
             {
                 text = "Exit",
                 prompt = "back",

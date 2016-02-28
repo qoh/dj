@@ -5,7 +5,7 @@ function love.conf(t)
   t.version = "0.10.0"
   t.console = not love.filesystem.isFused()
 
-  t.window.title = "Placeholder"
+  t.window.title = "Beats Me"
   t.window.width = 1280
   t.window.height = 720
   t.window.resizable = true

@@ -78,6 +78,12 @@ function state:enter(_, filename, song, data, mods, startFromEditor)
   self.audioSource:setPitch(self.mods.speed or 1)
   self.audioSource:play()
 
+  if song.video then
+    local videoname = util.filepath(filename) .. song.video
+    self.video = love.graphics.newVideo(videoname, false)
+    self.video:play()
+  end
+
   -- Set up the audio analysis stuff
   self.frequencies = {}
   self.frequencyCount = 2048
@@ -89,9 +95,16 @@ function state:enter(_, filename, song, data, mods, startFromEditor)
   if startFromEditor then
     self.startFromEditor = true
     self.startTimer = 0
-    self.audioSource:seek(math.max(startFromEditor * (1 / (self.song.bpm / 60)), 0))
+    local t = math.max(startFromEditor * (1 / (self.song.bpm / 60)), 0)
+    self.audioSource:seek(t)
+    if self.video then
+      self.video:seek(t)
+    end
   else
     self.audioSource:pause()
+    if self.video then
+      self.video:pause()
+    end
   end
 
   if config.particles then
@@ -123,6 +136,11 @@ function state:leave()
   self.audioSource = nil
   self.audioData = nil
 
+  if self.video then
+    self.video:pause()
+    self.video = nil
+  end
+
   local joystick = love.joystick:getJoysticks()[1]
   if joystick then
     joystick:setVibration()
@@ -133,6 +151,9 @@ function state:pause()
   love.mouse.setVisible(true)
 
   self.audioSource:pause()
+  if self.video then
+    self.video:pause()
+  end
 
   local joystick = love.joystick:getJoysticks()[1]
   if joystick then
@@ -145,6 +166,9 @@ function state:resume()
 
   if self.startTimer <= 0 then
     self.audioSource:play()
+    if self.video then
+      self.video:play()
+    end
   end
 end
 
@@ -645,6 +669,9 @@ function state:update(dt)
 
             if self.startTimer <= 0 then
                 self.audioSource:play()
+                if self.video then
+                  self.video:play()
+                end
                 self.startTimer = 0
             else
                 started = false
@@ -738,7 +765,11 @@ function state:update(dt)
                 local scrobble = (delta / math.pi) * 4
                 local target = self.audioSource:tell("seconds") + scrobble
                 local limit = self.audioData:getDuration("seconds")
-                self.audioSource:seek(math.max(0, math.min(limit, target)))
+                local t = math.max(0, math.min(limit, target))
+                self.audioSource:seek(t)
+                if self.video then
+                  self.video:seek(t)
+                end
 
                 -- Try to revive some notes
                 if delta < 0 then
@@ -770,6 +801,9 @@ function state:update(dt)
 
             if not self.lastSpinning then
                 self.audioSource:pause()
+                if self.video then
+                  self.video:pause()
+                end
             end
 
             self.lastSpinAngle = spinAngle
@@ -781,6 +815,9 @@ function state:update(dt)
             self.lastSpinning = false
 
             self.audioSource:play()
+            if self.video then
+              self.video:play()
+            end
         end
     end
 
@@ -946,6 +983,13 @@ function state:draw()
     local width, height = love.graphics.getDimensions()
     local position = self:getCurrentPosition()
 
+    if self.video then
+      local vw, vh = self.video:getDimensions()
+      local sx = width / vw
+      local sy = height / vh
+      love.graphics.draw(self.video, 0, 0, 0, sx, sy)
+    end
+
     love.graphics.setFont(self.regularFont)
     love.graphics.setColor(255, 255, 255)
     -- love.graphics.print(math.floor(position * 4) / 4, 2, 2)
@@ -990,16 +1034,19 @@ function state:draw()
     love.graphics.push()
     love.graphics.translate((love.math.random() - 0.5) * self.shakeMiss * 2, 0)
 
+    love.graphics.setLineWidth(1)
+
     -- Draw scratchboard
-    love.graphics.setColor(30, 30, 30)
+    love.graphics.setColor(30, 30, 30) -- 50
     love.graphics.rectangle("fill", x - 192, 0, 384, height)
+    love.graphics.setColor(150, 150, 150)
+    love.graphics.rectangle("line", x - 192, 0, 384, height)
 
     -- Draw beat lines
     local beatX1 = x - 192
     local beatX2 = x + 192
 
     love.graphics.setColor(255, 255, 255, 20)
-    love.graphics.setLineWidth(1)
 
     love.graphics.push()
     love.graphics.translate(0, -self:getBeatScale() * (1 - (position - math.floor(position))))
