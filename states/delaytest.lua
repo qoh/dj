@@ -4,6 +4,7 @@ local util = require 'lib.util'
 
 function state:init()
   self.music = love.audio.newSource("assets/delaytest.ogg")
+  self.sound = love.audio.newSource("assets/Laser_Shoot12.wav")
   self.bpm = 128
 
   self.font1 = love.graphics.newFont(20)
@@ -17,9 +18,11 @@ function state:enter(_, callback)
   self.callback = callback
 
   self.offsets = {}
-  self.maxOffsets = 30 -- use a maximum number of offset taps to give the player's timing a chance to improve over time
 
-  self.music:play()
+  -- use a max number of taps to give the player's timing a chance to improve over time
+  self.maxOffsets = 30
+
+  -- don't play music initially, wait for update to account for delay created by loading time
 end
 
 function state:leave()
@@ -73,11 +76,11 @@ function state:draw()
   local width, height = love.graphics.getDimensions()
   local lineY1 = height / 2 - 128
   local lineY2 = height / 2 + 128
-  local beat = self.music:tell() * (self.bpm / 60)
+  local beat = (self.music:tell() - self.delay) * (self.bpm / 60)
 
   love.graphics.push()
   love.graphics.translate(width / 2, 0)
-      love.graphics.translate(-128 * (beat - math.floor(beat)), 0)
+  love.graphics.translate(-128 * (beat - math.floor(beat)), 0)
   love.graphics.setColor(0, 0, 0, 127)
   love.graphics.setLineWidth(1)
 
@@ -90,7 +93,7 @@ function state:draw()
 
   love.graphics.pop()
 
-      local beatPower = (1 - (beat - math.floor(beat))) ^ 8
+  local beatPower = (1 - (beat - math.floor(beat))) ^ 8
   love.graphics.setColor(0, 0, 0)
   love.graphics.setLineWidth(2 + beatPower * 2)
   love.graphics.line(width / 2, lineY1 - 64 - beatPower * 8, width / 2, lineY2 + 64 + beatPower * 8)
@@ -108,7 +111,7 @@ function state:draw()
 
   love.graphics.setFont(self.font2)
   love.graphics.printf(
-    "Offset in milliseconds:\n" .. util.round(self.delay * 1000, 0.0001),
+    ("Offset in milliseconds:\n%.03f"):format(self.delay * 1000),
     200, height - 150 - 24, width - 400, "center"
   )
 end
