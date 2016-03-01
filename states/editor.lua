@@ -13,8 +13,8 @@ function state:init()
   self.markerFont = love.graphics.newFont(12)
   self.timeFont = love.graphics.newFont("assets/fonts/Roboto-Light.ttf", 14)
   self.warningFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 16)
-  self.hitSound = love.audio.newSource("assets/Laser_Shoot12.wav")
-  self.fadeSound = love.audio.newSource("assets/Hit_Hurt8.wav")
+  self.hitSound = love.audio.newSource("assets/sounds/ui/Laser_Shoot12.wav")
+  self.fadeSound = love.audio.newSource("assets/sounds/ui/Hit_Hurt8.wav")
 end
 
 function state:enter(_, filename, song, data, mods)
