@@ -22,6 +22,7 @@ function love.load()
 
   gamestate.registerEvents()
 
+  -- config.delay = nil
   if config.delay == nil then
     gamestate.switch(delaytest, function(delay)
       config.delay = delay

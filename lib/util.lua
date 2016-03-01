@@ -187,4 +187,8 @@ function util.imageFill(image)
         0, scale, scale)
 end
 
+function util.round(n, mult)
+  return math.floor(n / mult + 0.5) * mult
+end
+
 return util
