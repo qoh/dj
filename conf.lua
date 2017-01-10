@@ -2,8 +2,7 @@ local config = require "lib.config"
 
 function love.conf(t)
   t.identity = "dj"
-  t.version = "0.10.0"
-  t.console = not love.filesystem.isFused()
+  t.version = "0.10.2"
 
   t.window.title = "Beats Me"
   t.window.width = 1280
