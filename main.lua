@@ -6,6 +6,18 @@ local menu = require "states.menu"
 local delaytest = require "states.delaytest"
 
 function love.load()
+  love.window.setTitle("Beats Me")
+
+  assert(love.window.setMode(1280, 720, {
+    fullscreen = config.fullscreen,
+    vsync = config.vsync,
+    msaa = config.msaa,
+    resizable = true,
+    minwidth = 192 + 192,
+    minheight = 480,
+    highdpi = true
+  }))
+
   if love.filesystem.isFused() then
     local dir = love.filesystem.getSourceBaseDirectory()
     local success = love.filesystem.mount(dir, "")
