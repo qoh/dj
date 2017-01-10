@@ -1,3 +1,5 @@
+io.stdout:setvbuf("no")
+
 local gamestate = require "lib.hump.gamestate"
 local config = require "lib.config"
 local menu = require "states.menu"
