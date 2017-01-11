@@ -3,3 +3,5 @@ dj.love
 dj.zip
 dj.exe
 build/
+love/
+.atom-build.*
