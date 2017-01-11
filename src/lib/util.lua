@@ -34,7 +34,7 @@ function util.secondsToTime(seconds)
 end
 
 function util.addSeparators(value, forceFraction)
-    plain = tostring(math.abs(math.floor(value)))
+    local plain = tostring(math.abs(math.floor(value)))
 
     local result = ""
     local i = #plain - 2

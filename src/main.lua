@@ -20,6 +20,13 @@ function love.load()
 
   love.mouse.setCursor(love.mouse.newCursor("assets/cursor_pointer3D_shadow.png", 0, 0))
 
+  if love.filesystem.isFused() then
+    local source = love.filesystem.getSourceBaseDirectory()
+    if not love.filesystem.mount(source, '') then
+      print("Could not mount", source)
+    end
+  end
+
   if love.filesystem.isFile("assets/gamecontrollerdb.txt") then
     love.joystick.loadGamepadMappings("assets/gamecontrollerdb.txt")
     print("Loaded assets/gamecontrollerdb.txt mappings")

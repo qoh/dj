@@ -135,10 +135,7 @@ function state:keypressed(key)
 
             -- Write it out
             local real = love.filesystem.getRealDirectory(self.filename) .. "/" .. self.filename
-            local file = io.open(real, "w")
-
-            file:write(ser(self.song))
-            file:close()
+            love.filesystem.write(real, ser(self.song))
 
             self.unsaved = false
             print("Saved!")

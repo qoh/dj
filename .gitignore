@@ -2,6 +2,9 @@ Thumbs.db
 dj.love
 dj.zip
 dj.exe
-build/
-love/
-.atom-build.*
+build
+.atom-build.json
+.atom-build.cson
+love/*
+!love/.gitkeep
+node_modules
