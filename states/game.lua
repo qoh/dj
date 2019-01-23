@@ -362,7 +362,12 @@ function state:escape()
   end
 end
 
-function state:keypressed(key)
+function state:keypressed(key, scancode, isrepeat)
+  if isrepeat then
+    print('ignoring keypressed repeat')
+    return
+  end
+
   if key == "escape" then
     self:escape()
   elseif key == "kpenter" or key == "application" then
