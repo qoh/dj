@@ -16,6 +16,20 @@ function state:init()
   self.strongFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 18)
   self.messageFont = love.graphics.newFont("assets/fonts/Roboto-Bold.ttf", 24)
   self.comboFont = love.graphics.newFont("assets/fonts/Roboto-Regular.ttf", 24)
+
+  self.chromaCanvas = love.graphics.newCanvas()
+  self.chromaShader = love.graphics.newShader[[
+    extern vec2 direction;
+    vec4 effect(vec4 color, Image texture, vec2 tc, vec2 _)
+    {
+      return color * vec4(
+        Texel(texture, tc - direction).r,
+        Texel(texture, tc).g,
+        Texel(texture, tc + direction).b,
+        1.0);
+    }
+  ]]
+  self.chromaShader:send("direction", {0, 0})
 end
 
 function state:enter(_, filename, song, data, mods, startFromEditor)
@@ -986,6 +1000,15 @@ function state:draw()
     local width, height = love.graphics.getDimensions()
     local position = self:getCurrentPosition()
 
+    do
+      local angle = 0
+      local radius = 10
+      local dx = math.cos(angle) * radius / love.graphics.getWidth()
+      local dy = math.sin(angle) * radius / love.graphics.getHeight()
+      self.chromaShader:send("direction", {dx,dy})
+      love.graphics.setCanvas(self.chromaCanvas)
+    end
+
     if self.video then
       local vw, vh = self.video:getDimensions()
       local sx = width / vw
@@ -1622,6 +1645,13 @@ function state:draw()
     --     -- love.graphics.setColor(255, 255, 255, math.abs(value) * 10)
     --     love.graphics.line(x, 0, x, self.frequencies[i] * 720)
     -- end
+
+    do
+      love.graphics.setCanvas()
+      love.graphics.setShader(self.chromaShader)
+      love.graphics.draw(self.chromaCanvas)
+      love.graphics.setShader()
+    end
 end
 
 return state
