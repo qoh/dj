@@ -49,7 +49,7 @@ function state:init()
             }
         },
         main = {
-            title = "Beats Me",
+            title = "Beats Me Too",
             {
                 text = "Exit",
                 prompt = "back",
@@ -57,7 +57,7 @@ function state:init()
                 pos = function(w, h) return w / 14, h / 6 * 5 end
             },
             {
-                text = "Play a song",
+                text = "Quickplay",
                 keyfocus = true,
                 activate = function()
                     songselect:run(function(filename, song, data)
@@ -67,7 +67,7 @@ function state:init()
                 pos = function(w, h) return w / 14, h / 2 end
             },
             {
-                text = "Open editor",
+                text = "Song editor",
                 keyfocus = true,
                 activate = function()
                     songselect:run(function(filename, song, data)
@@ -106,6 +106,21 @@ function state:init()
                 activate = function() self:setScreen("main", 5) end,
                 pos = function(w, h) return w / 14, h / 6 * 5 end
             },
+        --[[   {
+                text = "Fullscreen On/Off",
+                prompt = "back",
+                activate = function() if(love.window.getFullscreen() == false) then
+                  love.window.setMode(0, 0, {fullscreen = true, FullscreenType = exclusive}
+                )
+
+
+                else
+                  love.window.setMode(width, height, flags)
+                  end
+                end,
+                pos = function(w, h) return w / 14, h / 6 * 5 end
+             } ]]--
+
             {
                 text = "Apply changes",
                 prompt = "apply",

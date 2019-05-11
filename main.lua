@@ -4,9 +4,8 @@ local gamestate = require "lib.hump.gamestate"
 local config = require "lib.config"
 local menu = require "states.menu"
 local delaytest = require "states.delaytest"
-
 function love.load()
-  love.window.setTitle("Beats Me")
+  love.window.setTitle("Beats Me Too")
 
   assert(love.window.setMode(1280, 720, {
     fullscreen = config.fullscreen,
