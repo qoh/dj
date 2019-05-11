@@ -1,0 +1,6 @@
+Program starting as '"C:\Program Files\love\love.exe" "C:\Users\SMASH Scholar\Projects\beats me\dj"'.
+Program 'love.exe' started in 'C:\Users\SMASH Scholar\Projects\beats me\dj' (pid: 13248).
+LOVE - Warning: lib/config.lua:23: Using deprecated function love.filesystem.isFile (replaced by love.filesystem.getInfo)
+Loaded assets/gamecontrollerdb.txt mappings
+LOVE - Warning: states/songselect.lua:21: Using deprecated function love.filesystem.isDirectory (replaced by love.filesystem.getInfo)
+Program completed in 14.22 seconds (pid: 13248).
