@@ -3,8 +3,8 @@ local state = {}
 local util = require 'lib.util'
 
 function state:init()
-  self.music = love.audio.newSource("assets/sounds/music/delaytest.ogg")
-  self.sound = love.audio.newSource("assets/sounds/ui/Laser_Shoot12.wav")
+  self.music = love.audio.newSource("assets/sounds/music/delaytest.ogg", "stream")
+  self.sound = love.audio.newSource("assets/sounds/ui/Laser_Shoot12.wav", "static")
   self.bpm = 128
 
   self.font1 = love.graphics.newFont(20)

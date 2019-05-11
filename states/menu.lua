@@ -12,8 +12,8 @@ function state:init()
     self.itemFont = love.graphics.newFont("assets/fonts/Montserrat-Regular.ttf", love.window.toPixels(24))
 
     self.sounds = {
-        click = love.audio.newSource("assets/sounds/ui/click3.wav"),
-        rollover = love.audio.newSource("assets/sounds/ui/rollover2.wav"),
+        click = love.audio.newSource("assets/sounds/ui/click3.wav", "static"),
+        rollover = love.audio.newSource("assets/sounds/ui/rollover2.wav", "static"),
     }
 
     self.prompts = {
@@ -373,7 +373,7 @@ end
 
 function state:update(dt)
     local w, h = love.graphics.getDimensions()
-    local scale = love.window.getPixelScale()
+    local scale = love.window.getDPIScale()
 
     local colors = {
         {127, 255,  50},
